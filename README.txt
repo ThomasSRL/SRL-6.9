@@ -1,9 +1,14 @@
-SRL-6
-=====
+SRL-6.9
+=======
 
 SRL Resource Library 6 is a scripting library aimed to aid programmers in creating scripts to automatically play the
 online role playing game, Runescape.  SRL is written in a Pascal-like scripting language using the Lape interpreter 
 and the Simba IDE. 
+
+This version is still in beta.
+
+It is compatible with Simba 1.3 (rc2) and NXT with dynamic interfaces.
+I would recommend to have the minimap in the top right corner for faster detection if the player is logged in. (Not mandatory though)
 
 Everything you need to know about SRL and Simba can be found at www.villavu.com.
 
