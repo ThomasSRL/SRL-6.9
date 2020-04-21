@@ -1,0 +1,936 @@
+(*
+Text
+====
+
+The text file holds functions and procedures that are used in Runescape text
+recognition.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/core/text.simba>`_.
+
+*)
+
+{$loadlib libsimpleocr}
+
+{$f-}
+
+(*
+var ocr
+~~~~~~~~~
+  An instance of SimpleOCR.
+*)
+var
+  OCR: TSimpleOCR;
+  UpFont: TFontSet;
+
+(*
+containsMatch
+~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function containsMatch(needle, haystack: string; match: extended; caseSensitive: boolean = true): extended;
+
+Finds a string within a string and returns the match percentage as an extended (0.00 - 1.00).
+
+    * needle: The text to look for.
+    * haystack: The string it searches in.
+    * match: Extended match treshold.
+    * caseSensitive: Optional boolean, self explanatory.
+
+.. note::
+
+    - by Thomas
+    - Last Updated: 29 June 2016 by Thomas
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      option: string;
+    begin
+      option := 'Silly tesseract: Take Abyss4lWh1p from ground';
+      if containsMatch('Take Abyssal Whip', option) > 0.75 then
+        writeLn('Found a whip');
+    end.
+*)
+
+function containsMatch(needle, haystack: string; caseSensitive: boolean = true): extended;
+var
+  text: string;
+  i, j, p: integer;
+  eArray: TExtendedArray;
+begin
+  if (needle = '') or (haystack = '') then
+    exit();
+
+  if (not caseSensitive) then
+  begin
+    needle := lowercase(needle);
+    haystack := lowercase(haystack);
+  end;
+
+  j := length(haystack) - length(needle);
+
+  if j < 0 then
+  begin
+    print('containsMatch(): needle-string is longer then haystack-string! Switching them for now.', TDebug.WARNING);
+    text := haystack;
+    haystack := needle;
+    needle := text;
+    j := abs(j);
+  end;
+
+  //Let's try and look for a direct match first.
+  p := pos(needle, haystack);
+  if (p > 0) then
+    result := 1.00
+
+  //If they are same length
+  else if (j = 0) then
+    result := stringMatch(needle, haystack)
+
+  else
+  begin
+    setLength(eArray, j);
+
+    for i := 1 to j do
+    begin
+      text := Copy(haystack, i, length(needle));
+      eArray[i - 1] := stringMatch(needle, text);
+    end;
+
+    result := eArray.highestValue(i);
+  end;
+
+  p := max(p, i + 1);
+  if (result > 0.00) then
+    print(copy(haystack, min(1, p-1), p-1) + '--' + Copy(haystack, p, length(needle)) + '--' + copy(haystack, p + length(needle), length(haystack)));
+
+  print('Found a match percentage of: ' + toStr(round(result * 100)) + '%.');
+end;
+
+(*
+containsMatch
+~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function containsMatch(needle, haystack: string; match: extended; caseSensitive: boolean = true): boolean; overload;
+
+Overloaded function. Finds a string within a string, with a match threshold.
+Returns true if the text is found.
+
+    * needle: The text to look for.
+    * haystack: The string it searches in.
+    * caseSensitive: Optional boolean, self explanatory.
+
+.. note::
+
+    - by Thomas
+    - Last Updated: 29 June 2016 by Thomas
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      option: string;
+    begin
+      option := 'Silly tesseract: Take Abyss4lWh1p from ground';
+      if containsMatch('Take Abyssal Whip', option, 0.75) then
+        writeLn('Found a whip');
+    end.
+*)
+
+function containsMatch(needle, haystack: string; caseSensitive: boolean = true;  match: extended): boolean; overload;
+begin
+  result := containsMatch(needle, haystack, caseSensitive) > match
+  if result then
+    print('Found "'+ needle +'" in string "'+ haystack +'".');
+end;
+
+(*
+findText
+~~~~~~~~
+
+.. code-block:: pascal
+
+    function findText(var p: TPoint; txt, fonts: TStringArray; searchBox: TBox): boolean;
+
+Uses a bitmap mask to find text on the screen.  Returns true if the text is found.
+
+    * p: The point the text is found.
+    * txt: The text to look for.
+    * fonts: The font(s) of the text.
+    * searchBox: The box to look for the text.
+
+.. note::
+
+    - by Stupid3ooo, modified by LordJashin & Coh3n
+    - Last Updated: 2 July 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      p: TPoint;
+    begin
+      if findText(p, ['Lobby'], [upCharsEx], options.getBounds()) then
+        writeln('Found "Exit to Lobby" text');
+
+    end;
+*)
+function findTxt(var p: TPoint; txt, fonts: TStringArray; searchBox: TBox): boolean;
+var
+  s, i, j, w, h: integer;
+begin
+  p := [-1, -1];
+  searchBox.setLimit(getClientBounds());
+
+  for i := 0 to high(txt) do
+    for j := 0 to high(fonts) do
+    begin
+      s := bitmapFromText(toStr(txt[i]), toStr(fonts[j]));
+
+      if findBitmapMaskTolerance(s, p, searchBox, 30, 30) then
+      begin
+        getBitmapSize(s, w, h);
+        p := point(p.x + round(w / 2), p.y + round(h / 2));
+        result := true;
+      end;
+
+      freeBitmap(s);
+
+      if result then
+        break(2);
+    end;
+end;
+
+(*
+findText; overload;
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function findText(var p: TPoint; col, tol: integer; txt, fonts: TStringArray; lookIn: TBox; waitTime: integer = 0): boolean; overload;
+
+Uses TPointArrays to find text on the screen.  Searches for the color (col) with
+tolerance (tol) on the screen, then looks for the text (txt) in a TPA created
+from the fonts (fonts).  Looks in the box (lookIn) and returns the point found
+(p). Returns true if the text is found. If the optional parameter (waitTime) is
+set, will wait specified amount of time for the text to be found before returning
+false.
+
+.. note::
+
+    - by Raymond and Coh3n
+    - Last Updated: 20 Feb 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      p: TPoint;
+    begin
+      if findText(p, clWhite, 10, ['Lobby'], [upCharsEx], settings.getBounds(), 5000) then
+        writeln('Found "Exit to Lobby" text');
+
+    end;
+*)
+function findText(var p: TPoint; col, tol: integer; txt, fonts: TStringArray; lookIn: TBox; waitTime: integer = 0): boolean; overload;
+var
+  b: TBox;
+  i, j, w, h : integer;
+  t : LongWord;
+  tpaColors, tpaText, matches: TPointArray;
+begin
+  t := (getSystemTime() + waitTime);
+  p := point(-1, -1);
+
+  if (not findColorsTolerance(tpaColors, col, lookIn, tol)) then
+    exit(false);
+
+  repeat
+    // loop through the fonts and texts to look for
+    for i := 0 to high(txt) do
+      for j := 0 to high(fonts) do
+      begin
+        tpaText := TPAFromText(txt[i], fonts[i], w, h);
+
+        if (tpaColors.findTextIn(h - 1, tpaText, matches)) then
+        begin
+          // sort the tpa matches and return the top left of the text
+          b := tpaText.getBounds();
+          matches.sortFromPoint(point(b.x1, b.y1));
+          p := matches[0];
+
+          result := true;
+          break(3);
+        end;
+      end;
+  until(getSystemTime() > t);
+end;
+
+(*
+extractTextFromTPA
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function extractTextFromTPA(tpa: TPointArray; minvspacing, maxvspacing, hspacing: integer; font: string): string;
+
+Returns the text found inside a TPA. The parameters are the following:
+
+    * tpa: the TPA of potential text
+    * minvspacing: Minimum vertical letter spacing
+    * maxvspacing: Maximum vertical letter spacing
+    * hspacing: Horozontal letter spacing
+    * font: The font of the text
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 1 March 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    extractTextFromTPA(tpa, 6, 10, 8, 'upChars');
+*)
+function extractTextFromTPA(tpa: TPointArray; minvspacing, maxvspacing, hspacing: integer; font: string): string;
+var
+  atpa: T2DPointArray;
+  b: TBox;
+begin
+  if (length(tpa) < 1) then
+    exit;
+
+  atpa := clusterTPAEx(tpa, minvspacing, hspacing);
+  b := getTPABounds(tpa);
+
+  sortATPAFromFirstPointX(atpa, point(b.x1, b.y1 + b.getHeight() div 2));
+  result := getTextATPA(atpa, maxvspacing, font);
+end;
+
+(*
+mouseText
+~~~~~~~~~
+
+.. code-block:: pascal
+
+    function mouseText(txt, fonts: TStringArray; searchBox: TBox; mouseAction: integer): boolean;
+
+Returns true if the mouse action is performed on the text.
+
+    * txt: The text to look for.
+    * fonts: The font(s) of the text.
+    * searchBox: The box to look for the text.
+    * mouseAction: The action of the mouse.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 1 March 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    mouseText(['Lobby'], [upCharsEx], tabLogout.bounds, MOUSE_LEFT);
+*)
+function mouseText(txt, fonts: TStringArray; searchBox: TBox; mouseAction: integer): boolean;
+var
+  p: TPoint;
+begin
+  if findTxt(p, txt, fonts, searchBox) then
+  begin
+    mouse(p.rand(3, 10), mouseAction);
+    exit(true);
+  end;
+end;
+
+(*
+typeByte
+~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure typeByte(k: byte);
+
+Types one character k.
+
+.. note::
+
+    - by Mutant Squirrle
+
+Example:
+
+.. code-block:: pascal
+
+    typeByte(VK_ENTER);
+
+*)
+procedure typeByte(key: byte);
+begin
+  {$IFDEF SMART}
+  if (key = 13) then
+    key := 10;
+  {$ENDIF}
+
+  if (not isKeyDown(key)) then
+    KeyDown(key);
+
+  Wait(50 + Random(70));
+
+ // if isKeyDown(key) then
+    KeyUp(key);
+end;   
+
+(*
+typeByteWait
+~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure typeByteWait(key: Byte; waitTime: integer);
+
+Holds down the desired key for the set waitTime.
+
+.. note::
+
+    - by Ollybest
+
+Example:
+
+.. code-block:: pascal
+
+     typeByteWait(vk_up, 800 + random(200));
+*)
+procedure typeByteWait(key: Byte; waitTime: integer);
+begin
+  if (not isKeyDown(key)) then
+    keyDown(key);
+
+  wait(waitTime);
+
+ // if isKeyDown(key) then
+    keyUp(key);
+end;
+
+(*
+typeSend
+~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure typeSend(text: string; pressEnter: boolean = true);
+
+Types text in a human-like way.  Optional parameter 'pressEnter'.  Will press
+enter by default.
+
+.. note::
+
+    - by SKy Scripter
+    - Last Updated: 29 January 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    // to type and press enter
+    typeSend('Hello');
+
+    // to type and not press enter
+    typeSend('Hello', false);
+
+*)
+procedure typeSend(text: string; pressEnter: boolean = true);
+var
+  i: Integer;
+begin
+  for i := 1 to Length(Text) do
+  begin
+    SendKeys(Text[i], 30 + Random(30), 30 + Random(30));
+    Wait(40 + Random(40));
+  end;
+
+  if pressEnter then
+    TypeByte(VK_ENTER);
+end;
+
+(*
+multiType
+~~~~~~~~~
+
+.. code-block:: pascal
+
+    function multiType(text: string; chance, maxSends: integer; pressEnter: boolean = true): boolean;
+
+Will simulate "spam" typing of the string 'text'. It will repeat a random amount
+between 1 and 'maxSends'. It will always type once, and then has a percent
+'chance' of typing again. Will not exceed 'maxSends'.
+
+.. note::
+
+    - Author: Ashaman88
+    - Last Updated: 7 May 2014 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+    if isMouseOverText('Party hat') then
+      multiType('woot', 35, 5);
+*)
+function multiType(text: string; chance, maxSends: integer; pressEnter: boolean = true): boolean;
+var
+  sends: integer;
+begin
+  result := true;
+
+  repeat
+    inc(sends);
+    typeSend(text, pressEnter);
+
+    if (random(100) > chance) or (not result) then
+      break;
+
+    wait(50 + random(50));
+  until(sends >= maxSends);
+end;
+
+(*
+multiType
+~~~~~~~~~
+
+.. code-block:: pascal
+
+    function multiType(k: byte; chance, maxSends: integer; pressEnter: boolean = true): boolean; overload;
+
+Overload for the other multiType, but uses bytes for the key sending
+
+.. note::
+
+    - Author: Ashaman88
+    - Last Updated: 7 May 2014 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+    if (mainscreen.isUptext('Tree')) then
+      multiType(VK_SPACE, 35, 5);
+*)
+function multiType(k: byte; chance, maxSends: integer): boolean; overload;
+var
+  sends: integer;
+begin
+  result := true;
+
+  repeat
+    inc(sends);
+    typeByte(k);
+
+    if (random(100) > chance) or (not result) then
+      break;
+
+    wait(50 + random(50));
+  until(sends >= maxSends);
+end;
+
+{*
+__findMouseOverBox
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function __findMouseOverBox(out box: TBox): boolean;
+
+Returns true if the mouse-over box is found on the client. Returns it's coordinates
+in 'box'.
+
+.. note::
+
+    - by euphemism
+    - Last Modified: 12 August 2013 by euphemism
+
+Example:
+
+.. code-block:: pascal
+
+    if __findMouseOverBox(tmpBox) then
+      writeln('Found mouse-over box!');
+*}
+{$IFNDEF CODEINSIGHT}
+function __findMouseOverBox(out b: TBox): boolean;
+const
+  COLOR_CHECK = 7103059;
+var
+  cW, cH, i: integer;
+  tpa: TPointArray;
+  atpa, lines: T2DPointArray;
+  box: TBox;
+  p: TPoint;
+begin
+  getMousePos(p.x, p.y);
+  getClientDimensions(cW, cH);
+  box := intToBox(max(p.x - 275, 0), max(p.y - 100, 0),
+                  min(p.x + 275, cW - 1), min(p.y + 250, cH - 1));
+
+  if (not findColors(tpa, 0, box)) then
+    exit();
+
+  atpa := clusterTPA(tpa, 3); // the border is 4*4 so cluster 1 less :)
+  sortATPASize(atpa, true); // the biggest one will most likely be ours.
+
+  setLength(lines, 2);
+
+  for i := 0 to high(atpa) do
+  begin
+
+    if (length(atpa[i]) < 100) then
+      continue();
+
+    box := getTPABounds(atpa[i]);
+
+    if (not inrange(box.getheight(), 22, 24)) then   //the height should be 23 pixels
+      continue();
+
+      if (similarColors(COLOR_CHECK, getColor(box.x1, min(box.y2 + 4, cH - 1)), 18)) and (similarColors(COLOR_CHECK, getColor(box.x2, min(box.y2 + 4, cH - 1)), 18)) then
+      begin
+        b := box;
+        exit(true);
+      end;
+  end;
+end;
+{$ENDIF}
+
+{*
+__getMouseOverText
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function __getMouseOverText(box: TBox; cleanBitmap, filteredBitmap: integer): string;
+
+Returns the mouse-over text found inside the 'box' based on the clean and
+filtered bitmaps.
+
+.. note::
+
+    - by euphemism
+    - Last Modified: 12 August 2013 by euphemism
+
+Example:
+
+.. code-block:: pascal
+
+*}
+{$IFNDEF CODEINSIGHT}
+function __getMouseOverText(const box: TBox): string;
+var
+  tpa: TPointArray;
+  atpa: T2DPointArray;
+  bmp, wid, hei, i, l: integer;
+  s: TStringArray;
+begin
+  result := '';
+
+  bmp := bitmapFromClient(box);
+  getBitmapSize(bmp, wid, hei);
+
+  thresholdAdaptiveBitmap(bmp, 0, 255, false, TM_Mean, 100);
+
+  if (not findColorsBitmap(bmp, tpa, clRed)) then
+    exit();
+
+  atpa := clusterTPAEx(tpa, wid, 2);
+  l := length(atpa);
+
+  sortATPAFromFirstPointY(atpa, point(wid div 2, 0));
+  setLength(s, l);
+
+  for i := 0 to (l - 1) do
+  begin
+    s[i] := extractTextFromTPA(atpa[i], 1, 4, 5, MouseOverChars);
+
+    if ((i + 1) <= (l - 1)) then
+      s[i] := s[i] + ' ';
+  end;
+
+  result := implode('', s);
+
+  freeBitmap(bmp);
+end;
+{$ENDIF}
+
+{*
+__getMouseOverTextTess
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    __getMouseOverTextTess(const box: TBox): string;
+
+Same as above method, except returns the mouseOverText inside 'box' using the
+tesseract-ocr.
+
+.. note::
+
+    - by Olly
+
+Example:
+
+.. code-block:: pascal
+
+*}
+{$IFNDEF CODEINSIGHT}
+function __getMouseOverTextTess(const box: TBox): string;
+begin
+  result := Tesseract_GetText(box.x1, box.y1, box.x2, box.y2, TTesseractFilter([3, 3, [false, 30, TM_Mean]]));
+end;
+{$ENDIF}
+
+(*
+getMouseOverText
+~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function getMouseOverText(): string;
+
+Returns the current mouse-over text.
+
+.. note::
+
+    - by euphemism & Coh3n
+    - Last Modified: 12 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    writeln(getMouseOverText());
+*)
+function getMouseOverText(useTesseract: boolean = false): string;
+var
+  box: TBox;
+begin
+  result := '';
+
+  if __findMouseOverBox(box) then
+    if useTesseract then
+      result := __getMouseOverTextTess(box)
+    else
+      result := __getMouseOverText(box);
+end;
+
+(*
+isMouseOverText
+~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function isMouseOverText(txt: TStringArray; waitTime: integer = 200): boolean;
+
+Returns true if one of the indexes in 'txt' is found in the current mouse-over text.
+Will wait up to 'waitTime' to find the text before exiting the function.
+
+.. note::
+
+    - by Coh3n
+    - Last Modified: 12 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if isMouseOverText(['Tree']) then
+    begin
+      getMousePos(x, y);
+      mouse(point(x, y), MOUSE_LEFT);
+    end;
+*)
+function isMouseOverText(txt: TStringArray; waitTime: integer = 200; useTesseract: boolean = false): boolean;
+var
+  i : integer;
+  t : LongWord;
+  s: string;
+begin
+  print('isMouseOverText()', TDebug.HEADER);
+  t := (getSystemTime() + waitTime);
+
+  repeat
+    s := getMouseOverText(useTesseract);
+    print('Current mouse-over text: "'+s+'"');
+
+    for i := 0 to high(txt) do
+      if (pos(txt[i], s) > 0) then
+      begin
+        print('Found "'+txt[i]+'" in mouse-over string: "'+s+'"');
+        result := true;
+        break(2);
+      end;
+
+    wait(20 + random(40));
+  until (getSystemTime() > t);
+
+  print('isMouseOverText(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+isMouseOverMenuOpen
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function isMouseOverMenuOpen(var res: TBox; waitTime: integer = 100): boolean;
+
+Returns true if the mouse-over menu is open.  Will wait a maximum of
+'waitTime' for the menu to appear.
+
+.. note::
+
+    - by Coh3n
+    - Last Modified: 12 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if isMouseOverMenuOpen(box) then
+      writeln('Mouse-over menu is open');
+*)
+function isMouseOverMenuOpen(var res: TBox; waitTime: integer = 100): boolean;
+var
+  t: LongWord;
+begin
+  res := [-1, -1, -1, -1];
+  t := (getSystemTime() + waitTime);
+
+  while ((getSystemTime() < t) and (not result)) do
+  begin
+    result := __findMouseOverBox(res);
+    wait(20 + random(20));
+  end;
+
+end;
+
+(*
+getUpText
+~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function getUpText(): string;
+
+Returns the current UpText (the text in the top-left corner of the screen).
+
+.. note::
+
+    - by slacky & KeepBotting
+    - Last Modified: 27 February 2016 by KeepBotting
+
+Example:
+
+.. code-block:: pascal
+
+    writeLn(getUpText());
+*)
+function getUpText(): string;
+var
+  UpTextArea: TBox := [4, 5, 500, 25];
+  UpTextFilter: TCompareRules := [-1, 85, True, 60];
+begin
+  result := ocr.recognize(UpTextArea, UpTextFilter, UpFont);
+  print('getUpText(): '+toStr(result));
+end;
+
+(*
+isUpText
+~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function isUpText(txt: string; waitTime: integer = 100): boolean;
+
+Returns true if the string 'txt' is found in the current UpText.
+Will wait up to 'waitTime' to find the text before exiting the function.
+
+.. note::
+
+    - by KeepBotting
+    - Last Modified: 27 February 2016 by KeepBotting
+
+Example:
+
+.. code-block:: pascal
+
+    if isUpText('Banker') then writeLn('Found the bank!');
+*)
+function isUpText(txt: string; waitTime: integer = 100): boolean;
+var
+  t: TCountDown;
+  s: String;
+begin
+  t.setTime(waitTime);
+
+  repeat
+    s := getUpText();
+    if (pos(txt, s) > 0) then
+      exit(true);
+    wait(randomRange(10, 40));
+  until t.isFinished();
+end; 
+
+(*
+isUpText
+~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function isUpText(txt: TStringArray; waitTime: integer = 100): boolean; overload;
+
+Overloaded function. Takes a TStringArray instead of a string.
+
+Returns true if any one of the indicies in 'txt' is found in the current UpText.
+Will wait up to 'waitTime' to find the text before exiting the function.
+
+.. note::
+
+    - by KeepBotting
+    - Last Modified: 27 February 2016 by KeepBotting
+
+Example:
+
+.. code-block:: pascal
+
+    if isUpText(['Bank', 'Banker', 'Booth']) then writeLn('Found the bank!');
+*)
+function isUpText(txt: TStringArray; waitTime: integer = 100): boolean; overload;
+var
+  i: integer;
+  t: TCountDown;
+  s: String;
+begin
+  t.setTime(waitTime);
+
+  repeat
+    s := getUpText();
+    for i := 0 to high(txt) do
+      if (pos(txt[i], s) > 0) then
+        exit(true);
+    wait(randomRange(10, 30));
+  until t.isFinished();
+end; 
+
+begin
+  UpFont.Load(FontPath + 'UpCharsEx');
+  ocr.fontData.spaceWidth := 5;
+end;
+
+{$f+}

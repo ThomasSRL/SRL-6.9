@@ -1,0 +1,3495 @@
+(*
+Minimap
+=======
+
+The minimap file holds all SRL's functions that interact with the Runescape minimap.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/minimap.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the bankScreen methods.
+
+**const Angles**
+
+Constants that represent the N, S, E, W directions on the compass.
+
+    * MM_DIRECTION_NORTH
+    * MM_DIRECTION_EAST
+    * MM_DIRECTION_SOUTH
+    * MM_DIRECTION_WEST
+
+*)
+const
+  MM_DIRECTION_NORTH = 0;
+  MM_DIRECTION_EAST  = 90;
+  MM_DIRECTION_SOUTH = 180;
+  MM_DIRECTION_WEST  = 270;
+
+(*
+**const Minimap Dots**
+
+Constants representing the different dots that appear on the minimap.
+*Developer note: Each value represents the difference between the two bottom colored pixels of each dot.*
+
+    * MM_DOT_NPC
+    * MM_DOT_ITEM
+    * MM_DOT_PLAYER
+    * MM_DOT_FRIEND
+    * MM_DOT_TEAM
+
+*)
+const
+  MM_DOT_NPC    = 714965;
+  MM_DOT_ITEM   = 3023;
+  MM_DOT_PLAYER = 13813713;
+  MM_DOT_FRIEND = 5376;
+  MM_DOT_TEAM   = 2171941;
+
+(*
+**const Symbols**
+
+Constants representing all the Runescape symbols.
+
+    *Shops*
+
+    * MM_SYMBOL_SHOP_ARCHERY
+    * MM_SYMBOL_SHOP_AXE
+    * MM_SYMBOL_SHOP_CANDLE
+    * MM_SYMBOL_SHOP_CLOTHES
+    * MM_SYMBOL_SHOP_COOKERY
+    * MM_SYMBOL_SHOP_CRAFTING
+    * MM_SYMBOL_SHOP_FARMING
+    * MM_SYMBOL_SHOP_FISHING
+    * MM_SYMBOL_SHOP_FOOD
+    * MM_SYMBOL_SHOP_HUNTER
+    * MM_SYMBOL_SHOP_KEBAB
+    * MM_SYMBOL_SHOP_MACE
+    * MM_SYMBOL_SHOP_MAGIC
+    * MM_SYMBOL_SHOP_PET
+    * MM_SYMBOL_SHOP_PLATEBODY
+    * MM_SYMBOL_SHOP_PLATESKIRT
+    * MM_SYMBOL_SHOP_SCIMITAR
+    * MM_SYMBOL_SHOP_SHIELD
+    * MM_SYMBOL_SHOP_MINING
+    * MM_SYMBOL_SHOP_SWORD
+    * MM_SYMBOL_SHOP_STAFF
+    * MM_SYMBOL_SHOP_SUMMONING
+
+    *Stalls*
+
+    * MM_SYMBOL_STALL_SPICE
+    * MM_SYMBOL_STALL_GEM
+    * MM_SYMBOL_STALL_SILK
+    * MM_SYMBOL_STALL_SILVER
+
+    *Skills & Objects*
+
+    * MM_SYMBOL_TREE
+    * MM_SYMBOL_FARMING
+    * MM_SYMBOL_FISHING
+    * MM_SYMBOL_RUNECRAFTING
+    * MM_SYMBOL_HUNTING
+    * MM_SYMBOL_HOUSE
+    * MM_SYMBOL_POTTERY
+    * MM_SYMBOL_MINING
+    * MM_SYMBOL_JEWELERY
+    * MM_SYMBOL_SLAYER_CONTRACT
+    * MM_SYMBOL_SLAYER_MASTER
+    * MM_SYMBOL_HERBALIST
+    * MM_SYMBOL_WHEEL
+    * MM_SYMBOL_OBELISK
+    * MM_SYMBOL_TANNER
+    * MM_SYMBOL_TRAINING_DUMMY
+    * MM_SYMBOL_STORE
+    * MM_SYMBOL_SHORTCUT
+    * MM_SYMBOL_WEAVE
+    * MM_SYMBOL_COOKING_RANGE
+    * MM_SYMBOL_AGILITY
+    * MM_SYMBOL_FURNACE
+    * MM_SYMBOL_ALTAR
+    * MM_SYMBOL_ANVIL
+    * MM_SYMBOL_APOTHECARY
+    * MM_SYMBOL_ARROW
+    * MM_SYMBOL_BAR
+    * MM_SYMBOL_BANK
+    * MM_SYMBOL_LODESTONE
+    * MM_SYMBOL_CHURN
+    * MM_SYMBOL_DUNGEON
+    * MM_SYMBOL_TRADER_FUR
+    * MM_SYMBOL_SPOT_REST
+    * MM_SYMBOL_GUIDE
+    * MM_SYMBOL_HAIR_DRESSER
+    * MM_SYMBOL_MAKEOVER_MAGE
+    * MM_SYMBOL_MILL
+    * MM_SYMBOL_MINIGAME
+    * MM_SYMBOL_OBELISK_MINI
+    * MM_SYMBOL_PORTAL
+    * MM_SYMBOL_QUEST
+    * MM_SYMBOL_WINDMILL
+    * MM_SYMBOL_SAND
+    * MM_SYMBOL_SAWMILL
+    * MM_SYMBOL_TRANSPORTATION
+    * MM_SYMBOL_UNDERGROUND
+    * MM_SYMBOL_WATER
+    * MM_SYMBOL_DIVINATION
+    * MM_SYMBOL_SEASONAL_EVENT
+
+*)
+const
+  MM_SYMBOL_SHOP_ARCHERY    = 0;
+  MM_SYMBOL_SHOP_AXE        = 1;
+  MM_SYMBOL_SHOP_CANDLE     = 2;
+  MM_SYMBOL_SHOP_CLOTHES    = 3;
+  MM_SYMBOL_SHOP_COOKERY    = 4;
+  MM_SYMBOL_SHOP_CRAFTING   = 5;
+  MM_SYMBOL_SHOP_FARMING    = 6;
+  MM_SYMBOL_SHOP_FISHING    = 7;
+  MM_SYMBOL_SHOP_FOOD       = 8;
+  MM_SYMBOL_SHOP_HUNTER     = 9;
+  MM_SYMBOL_SHOP_KEBAB      = 10;
+  MM_SYMBOL_SHOP_MACE       = 11;
+  MM_SYMBOL_SHOP_MAGIC      = 12;
+  MM_SYMBOL_SHOP_PET        = 13;
+  MM_SYMBOL_SHOP_PLATEBODY  = 14;
+  MM_SYMBOL_SHOP_PLATESKIRT = 15;
+  MM_SYMBOL_SHOP_SCIMITAR   = 16;
+  MM_SYMBOL_SHOP_SHIELD     = 17;
+  MM_SYMBOL_SHOP_MINING     = 18;
+  MM_SYMBOL_SHOP_SWORD      = 19;
+  MM_SYMBOL_SHOP_STAFF      = 20;
+  MM_SYMBOL_SHOP_SUMMONING  = 21;
+
+  MM_SYMBOL_STALL_SPICE     = 30;
+  MM_SYMBOL_STALL_GEM       = 31;
+  MM_SYMBOL_STALL_SILK      = 32;
+  MM_SYMBOL_STALL_SILVER    = 33;
+
+  MM_SYMBOL_TREE            = 40;
+  MM_SYMBOL_FARMING         = 41;
+  MM_SYMBOL_FISHING         = 42;
+  MM_SYMBOL_RUNECRAFTING    = 43;
+  MM_SYMBOL_HUNTING         = 44;
+  MM_SYMBOL_HOUSE           = 45;
+  MM_SYMBOL_POTTERY         = 46;
+  MM_SYMBOL_MINING          = 47;
+  MM_SYMBOL_JEWELERY        = 48;
+  MM_SYMBOL_SLAYER_CONTRACT = 49;
+  MM_SYMBOL_SLAYER_MASTER   = 50;
+  MM_SYMBOL_HERBALIST       = 51;
+  MM_SYMBOL_WHEEL           = 52;
+  MM_SYMBOL_OBELISK         = 53;
+  MM_SYMBOL_TANNER          = 54;
+  MM_SYMBOL_TRAINING_DUMMY  = 55;
+  MM_SYMBOL_STORE           = 56;
+  MM_SYMBOL_SHORTCUT        = 57;
+  MM_SYMBOL_WEAVE           = 58;
+  MM_SYMBOL_COOKING_RANGE   = 59;
+  MM_SYMBOL_AGILITY         = 60;
+  MM_SYMBOL_FURNACE         = 61;
+  MM_SYMBOL_ALTAR           = 62;
+  MM_SYMBOL_ANVIL           = 63;
+  MM_SYMBOL_APOTHECARY      = 70;
+  MM_SYMBOL_ARROW           = 71;
+  MM_SYMBOL_BAR             = 72;
+  MM_SYMBOL_BANK            = 73;
+  MM_SYMBOL_LODESTONE       = 74;
+  MM_SYMBOL_CHURN           = 75;
+  MM_SYMBOL_DUNGEON         = 76;
+  MM_SYMBOL_TRADER_FUR      = 77;
+  MM_SYMBOL_SPOT_REST       = 78;
+  MM_SYMBOL_GUIDE           = 79;
+  MM_SYMBOL_HAIR_DRESSER    = 80;
+  MM_SYMBOL_MAKEOVER_MAGE   = 81;
+  MM_SYMBOL_MILL            = 82;
+  MM_SYMBOL_MINIGAME        = 83;
+  MM_SYMBOL_OBELISK_MINI    = 84;
+  MM_SYMBOL_PORTAL          = 85;
+  MM_SYMBOL_QUEST           = 86;
+  MM_SYMBOL_WINDMILL        = 87;
+  MM_SYMBOL_SAND            = 88;
+  MM_SYMBOL_SAWMILL         = 89;
+  MM_SYMBOL_TRANSPORTATION  = 90;
+  MM_SYMBOL_UNDERGROUND     = 91;
+  MM_SYMBOL_WATER           = 92;
+  MM_SYMBOL_DIVINATION      = 93;
+  MM_SYMBOL_SEASONAL_EVENT  = 94;
+
+(*
+**const Buttons**
+
+Constants representing the minimap buttons.
+
+    * MM_BUTTON_COMPASS
+    * MM_BUTTON_RUN
+    * MM_BUTTON_LODESTONE
+    * MM_BUTTON_MAP
+
+*)
+const
+  MM_BUTTON_COMPASS = 0;
+  MM_BUTTON_RUN = 1;
+  MM_BUTTON_LODESTONE = 2;
+  MM_BUTTON_MAP = 3;
+
+{*
+**type _TRSSymbol**
+
+A type that stores minimap symbol information.
+
+*}
+type
+  _TRSSymbol = record
+    name: string;
+    bmp: integer;
+    color: integer;
+  end;
+
+type
+  TFoundSymbol = record
+   ID: Integer;
+   Pos: TPoint;
+   Acc: Extended;
+ end;
+  TFoundSymbols = array of TFoundSymbol;
+
+{*
+**type _TRSMMButton**
+
+A type that stores minimap button information.
+
+*}
+type
+  _TRSMMButton = record
+    bounds: TBox;
+    center: TPoint;
+    radius: byte;
+  end;
+
+(*
+**type TRSMinimap**
+
+.. code-block:: pascal
+
+    type
+      TRSMinimap = type TRSInterface;
+
+A type that stores the minimap interface properties.
+
+*)
+type
+  TRSMinimap = record(TRSInterface)
+    symbolAccuracy: extended;
+    bmpMask: integer;
+    button: array [0..3] of _TRSMMButton;
+    CompassEdge, CompassEdge2: TPointArray;
+  end;
+
+(*
+**var minimap**
+
+.. code-block:: pascal
+
+    var
+      minimap: TRSMinimap;
+
+A variable through which scripters can access the TRSMinimap type methods.
+
+*)
+var
+  minimap: TRSMinimap;
+
+(*
+TRSMinimap methods
+~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **minimap** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    a := minimap.getAngleDegrees();
+
+*)
+
+   
+function TRSMinimap.__findLodestone(): TPoint;
+var
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+  i: integer;
+  b: Tbox
+begin
+  FindColorsTolerance(TPA, 4202552, getClientBounds(), 24);
+  ATPA := TPA.cluster(5);
+  ATPA.sortBySize();
+  ATPA.filterBetween(0, 100);
+
+  for i := 0 to high(ATPA) do
+  begin
+    b := atpa[i].getBounds();
+    if (inrange(b.getWidth(), 22, 24)) and (b.getHeight() = 16) then
+    begin
+      result := atpa[i].getMiddle();
+      exit(point(result.x + 1, result.y - 2));
+    end;
+  end;
+end;
+
+function TRSMinimap.__findCompass(p: TPoint): TPoint;
+var
+  i: integer;
+begin
+  for i := (p.y) downto 0 do
+    if (getColor(point(p.x, i)) = 3418907) and (getColor(point(p.x, i - 1)) = 2826771) then
+      exit(point(p.x - 2, i + 20));
+end;
+
+function TRSMinimap.__findWorldMap(p: TPoint): TPoint;
+var
+  i: integer;
+begin
+  for i := (p.x) to getclientbounds().getwidth() do
+    if (getColor(point(i, p.y)) = 1182721) and (getColor(point(i - 1, p.y)) = 1182721) then
+      exit(point(i - 16, p.y));
+end;
+
+function TRSMinimap.__setup(): boolean;
+var
+  p1, p2, p3, p4: TPoint;
+  b: TBox
+begin
+
+    p1 := self.__findLodestone();
+    if (p1 = point(0, 0)) then
+      exit();
+
+    p2 := self.__findCompass(p1);
+    if (p2 = point(0, 0)) then
+      exit();
+
+    p3 := self.__findWorldMap(p1);
+    if (p3 = point(0, 0)) then
+      exit();
+
+    p4 := point(p3.x, p2.y);
+    if (p4 <> point(0, 0)) then
+      result := true;
+
+    b := [p2.x - 19, p2.y - 19, p3.x + 20, p3.y + 20];
+
+    self.setBounds(b);
+                                                                 { Bounds | Center | Radius }
+    button[MM_BUTTON_LODESTONE] := [[p1.x - 5, p1.y - 5, p1.x + 5, p1.y + 5], p1, 13];
+    button[MM_BUTTON_COMPASS]   := [[p2.x - 16, p2.y - 16, p2.x + 16, p2.y + 16], p2, 15];
+    button[MM_BUTTON_MAP]       := [[p3.x - 5, p3.y - 5, p3.x + 5, p3.y + 5], p3, 12];
+    button[MM_BUTTON_RUN]       := [[p4.x - 5, p4.y - 5, p4.x + 5, p4.y + 5], p4, 16];
+    with (Button[MM_BUTTON_COMPASS]) do
+    begin
+      CompassEdge := TPAFromCircle(Center.x, Center.y, Radius);
+      CompassEdge2 := TPAFromCircle(Center.x, Center.y, Radius - 1);
+    end;
+end;
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.__init();
+
+Initializes the TRSMinimap.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.__init();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSMinimap.__init();
+begin
+  with self do
+  begin
+    name := 'RS Minimap';
+    ID := ID_INTERFACE_MINIMAP;
+    parentID := -1;
+    isStatic := false;
+    symbolAccuracy := 0.65;
+    bmpMask := BitmapFromString(224, 189, 'meJzt0olhpAAAw8D03/RdA+TbwEoYTQmWPz6SJEmSJEmSJ/qXH6ArPRSd/U7oVo9DB78futiD0Knviu72CHTke6PrjaPzLqAbzqLD7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr7qBLbqKr5jT0lS5Bj5ozdY/Idc7Idc7Idc7Idc7Idc7Idc7I9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y9c+Y/fyfXTRv9qtzdtG80wvn7KJ5j5fP2UVztT+es4vmOqecs4vmCiees4vmXKefs4vmLBeds3/mFP0zZv0zZv0zZv0zZv0zZv0zZv0zZv0zZv0zZv0zZv0zZm/4Z3/Oy67758voSXKh337g0qf9BbhhTke/6RL0qDkBfaJr0evmT+j7vAO9cV5EH+d96KXza/Rl3o3eO79An4VBr54foW+CoYfP9+iPwOj58w36IDB6/nyFfgePLpCv0O9QoCPkU/Q1FOgIOUb/woLukGP0LyzoDjlG/8KC7pBj9C8s6A45Rv/Cgu6QY/QvLOgOOUb/woLukGP0LyzoDjlG/8KC7pBj9C8s6A45Rv/Cgu6QY/QvFOgI+RR9DQU6Qr5Cv4NHF8hX6HfcDJ3rcejg90MXW0A3HEfnvTe63iPQke+K7vYgdOr7oYs9Dh38TuhWD0Vnvwe60qPR8e3oPk9H91ej4yRJkiRJkiSk/xotWe8=');
+    setBitmapName(bmpMask, 'Minimap Mask');
+  end;
+  addOnTerminate('__freeMinimapMask');
+end;
+{$ENDIF}
+
+{*
+__freeMinimapMask
+-----------------
+
+.. code-block:: pascal
+
+    procedure __freeMinimapMask();
+
+Frees the minimap mask bitmap.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 09 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    __freeMinimapMask();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure __freeMinimapMask();
+begin
+  if (bitmapExists(minimap.bmpMask)) then
+    freeBitmap(minimap.bmpMask);
+end;
+{$ENDIF}
+
+(*
+getAngleRadians
+---------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getAngleRadians(): extended;
+
+Returns the compass angle in radians.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 28 October 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      angle: extended;
+    begin
+      angle := minimap.getAngleRadians();
+      writeLn(angle);
+*)
+function TRSMinimap.getAngleRadians(): Extended;
+
+  function AvgExtended(const tE: TExtendedArray): Extended;
+  var
+    i, h: Integer;
+  begin
+    h := High(tE);
+    if h < 0 then Exit(0);
+    for i := 0 to h do
+      Result := (Result + tE[i]);
+    Result := Result / (H+1);
+  end;
+
+const
+  PI_OVER_2: Extended = PI / 2.00;
+var
+  tDial, tmp: TPointArray;
+  aDial: T2DPointArray;
+  Angles: TExtendedArray;
+  i, mX, mY: Integer;
+  Mid: TPoint;
+  Bools: array [0..1] of Boolean;
+  MouseHovered: Boolean;
+begin
+  with (Self.Button[MM_BUTTON_COMPASS]) do
+  begin
+    FindColorsTolerance(tDial, 9477483, Bounds, 25, ColorSetting(2, 2.20, 0.97));
+ //   nas.drawing.drawbox(bounds, false, clred);
+    FilterPointsDist(tDial, 12, 15, Center.x, Center.y);
+    Mid := Center;
+    GetMousePos(mX, mY);
+    MouseHovered := (Distance(Point(mX, mY), Mid) <= Radius);
+  end;
+
+  if (MouseHovered) then
+  begin
+    for i := 0 to High(tDial) do
+      if (not SimilarColors(3366763, GetColor(tDial[i]), 20)) then // yellow border when hovered
+        tmp := tmp + tDial[i];
+
+    if (Length(tmp) > 0) then
+      tDial := tmp;
+  end;
+
+  if (Length(tDial) = 0) then
+    Exit(Print('TRSMinimap.getAngleRads(): Found no dial', 0.00));
+
+  aDial := SplitTPAEx(tDial, 2, 2);
+  SortATPAFromMidPoint(aDial, Mid);
+  SetLength(tDial, 0);
+  tDial := aDial[High(aDial)];
+
+  SetLength(Angles, Length(tDial));
+  for i := 0 to High(tDial) do
+    Angles[i] := Degrees(FixRad(ArcTan2(tDial[i].Y - Mid.Y, tDial[i].X - Mid.X) + PI_OVER_2));
+
+  Bools := [False, False];
+  for i := 0 to High(Angles) do
+    if (Angles[i] >= 0.00) and (Angles[i] <= 10.0) then
+      Bools[0] := True
+    else if (Angles[i] <= 360.0) and (Angles[i] >= 350.0) then
+      Bools[1] := True;
+
+  if (Bools[0]) and (Bools[1]) then
+    Exit(Radians(180.0));
+
+  Result := FixRad(Radians(AvgExtended(Angles)) - Radians(180));
+end;
+
+(*
+getAngleDegrees
+---------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getAngleDegrees(): extended;
+
+Returns the compass angle in degrees.
+
+.. note::
+
+    - by Wizzup?
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      angle: extended;
+    begin
+      angle := round(minimap.getAngleDegrees());
+      writeLn(angle);
+*)
+function TRSMinimap.getAngleDegrees(): extended;
+begin
+  Result := Degrees(Self.getAngleRadians());
+  if (Result = 360.0) then
+    Result := 0.00;
+end;
+
+(*
+setAngle
+--------
+
+.. code-block:: pascal
+
+    function TRSMinimap.setAngle(angleDegrees: integer): boolean;
+
+Returns true if it rotates the compass angle to **angleDegrees** . You can use
+the angle constants at the top of this page, or any other angle.
+
+.. note::
+
+    - by nielsie95 & Nava2
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.setAngle(MM_DIRECTION_SOUTH);
+*)
+function TRSMinimap.setAngle(Angle: Extended; Accurate: Boolean = False): Boolean;
+  function Compass_Distance(Angle, Target: Extended): Extended;
+  begin
+    if (Abs(Target - Angle) < 180) then
+    begin
+      Result := Target - Angle;
+      Exit;
+    end;
+
+    if (Target > Angle) then
+      Result := Target - Angle - 360
+    else
+      Result := Target - Angle + 360;
+  end;
+  procedure Key(Left: Boolean);
+  begin
+    case (Left) of
+      True:
+        if (not isKeyDown(VK_LEFT)) then
+        begin
+          if (isKeyDown(VK_RIGHT)) then
+            KeyUp(VK_RIGHT);
+          KeyDown(VK_LEFT)
+        end;
+      False:
+        if (not isKeyDown(VK_RIGHT)) then
+        begin
+          if (isKeyDown(VK_LEFT)) then
+            KeyUp(VK_LEFT);
+          KeyDown(VK_RIGHT)
+        end;
+    end;
+  end;
+var
+  Left: Boolean;
+  AngleDistance, CurrentAngle: Extended;
+  Tries, Tolerance, MaxTries: Integer;
+  Time: UInt64;
+label
+  Retry;
+begin
+  Tries := 0;
+  MaxTries := Random(10, 13);
+  Tolerance := 5;
+  Angle := FixD(Angle);
+
+  Retry:
+  Inc(Tries);
+  CurrentAngle := Self.getAngleDegrees();
+  Time := GetTickCount() + Random(5000, 6000);
+
+  while (Abs(Compass_Distance(CurrentAngle, Angle)) > Tolerance) and (GetTickCount() < Time) do
+  begin
+    AngleDistance := CurrentAngle - Angle;
+    Left := ((AngleDistance > 0) and (abs(AngleDistance) <= 180)) or ((AngleDistance < 0) and (abs(AngleDistance) > 180));
+    Key(Left);
+
+    CurrentAngle := Self.getAngleDegrees();
+    Result := Abs(Compass_Distance(CurrentAngle, Angle)) <= Tolerance;
+    if (Result) then
+      Break();
+
+    Wait(Random(5, 10));
+  end;
+
+  if (Left) then
+    KeyUp(VK_LEFT)
+  else
+    KeyUp(VK_RIGHT);
+
+  if (not Accurate) then
+    Exit();
+
+  Wait(Random(270, 420));
+  CurrentAngle := Self.getAngleDegrees();
+  Result := Abs(Compass_Distance(CurrentAngle, Angle)) <= Tolerance;
+
+  if (not Result) and (Tries < MaxTries) then
+    goto Retry;
+end;
+
+(*
+mouseOffCompass
+---------------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.mouseOffCompass();
+
+Moves the mouse off of the compass. This is because the dial vanishes when the
+mouse of on the compass.
+
+.. note::
+
+    - by Olly
+    - Last Modified: 6 November 2014 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+      minimap.mouseOffCompass();
+*)
+procedure TRSMinimap.mouseOffCompass();
+var
+  b, mouseRange, clientArea: TBox;
+  p: TPoint;
+begin
+  getClientDimensions(clientArea.x2, clientArea.y2);
+
+  b := self.button[MM_BUTTON_COMPASS].bounds;
+  b.edit(-10, -25, 10, 10);
+
+  mouseRange := [b.x1 -50, b.y1 -50, b.x2 +50, b.y2 +50];
+  mouseRange.setLimit([0, 0, clientArea.x2 -1, clientArea.y2 -1]);
+
+  // get a point that is in mouseRange but not in b (compass bounds);
+  p := mouseRange.getRandomPoint([b]);
+
+  if (p.x <> -1) then
+  begin
+    mouse(p, MOUSE_MOVE);
+    print('minimap.mouseOffCompass(): Succesfully moved mouse off of compass', TDebug.SUB);
+  end else
+    print('minimap.mouseOffCompass(): Failed to move mouse off of compass', TDebug.ERROR);
+end;
+
+(*
+clickCompass
+------------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.clickCompass(faceSouth: boolean = false);
+
+Clicks the Runescape compass to set the angle to north. If **faceSouth** is true,
+it will right click and make the compass south *(default = false)*
+
+.. note::
+
+    - by Olly
+    - Last Modified: 12 March 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.clickCompass();
+    minimap.clickCompass(true); // To face south
+*)
+procedure TRSMinimap.clickCompass(faceSouth: boolean = false);
+begin
+  if (not self.__setup()) then
+  begin
+    print('TRSMinimap.clickCompass(): was not able to find the minimap', TDebug.SUB);
+    exit();
+  end;
+  mouseCircle(self.button[MM_BUTTON_COMPASS].center.x, self.button[MM_BUTTON_COMPASS].center.y,
+              self.button[MM_BUTTON_COMPASS].radius, MOUSE_MOVE);
+
+  if faceSouth or (random(4) = 2) then
+  begin
+    fastClick(MOUSE_RIGHT);
+    wait(random(100, 200));
+
+    case faceSouth of
+      true: chooseOption.select(['Face So']);
+      false: chooseOption.select(['Face No']);
+    end;
+  end else
+    fastClick(MOUSE_LEFT);
+
+  self.mouseOffCompass();
+  wait(150 + random(300));
+  print('TRSMinimap.clickCompass(): Clicked compass', TDebug.SUB);
+end;
+
+{*
+__createSearchAngles
+--------------------
+
+.. code-block:: pascal
+
+    function __createSearchAngles(angle, range: extended): T2DExtendedArray;
+
+Creates start and end search angles for minmap.findDTM/DTMs. Used because we
+will need multiple searches if the range is greater than 360 or less than 0
+
+Example:
+  if angle is 0.00 and range is 30 will need to search (345..360) and (0..15).
+
+.. note::
+
+    - by Olly
+    - Last Modified: 1 February 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    searches := __createSearchAngles(90.0, 25.0);
+*}
+{$IFNDEF CODEINSIGHT}
+function __createSearchAngles(angle, range: extended): T2DExtendedArray;
+var
+  startA, endA: extended;
+begin
+  startA := (angle - range);
+  endA := (angle + range);
+
+  if (startA < 0) then
+  begin
+    insert(TExtendedArray([360 + startA, 360]), result);
+    insert(TExtendedArray([0, 0 + endA]), result);
+  end;
+
+  if (endA > 360) then
+  begin
+    insert(TExtendedArray([startA, 360]), result);
+    insert(TExtendedArray([0, 0 + abs(endA - 360)]), result);
+  end;
+
+  if (length(result) < 1) then
+    insert(TExtendedArray([startA, endA]), result);
+end;
+{$ENDIF}
+
+(*
+isPointOn
+---------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isPointOn(p: TPoint): boolean;
+
+Returns true if the point **p** is on the minimap
+
+.. note::
+
+    - by Olly
+    - Last Updated: 09 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.isPointOn(someRandomPoint) then
+      writeln('Point is on the minimap!');
+*)
+function TRSMinimap.isPointOn(p: TPoint): boolean;
+begin
+  result := false;
+
+  if (pointInBox(p, self.getBounds())) then
+    result := (fastGetPixel(self.bmpMask, p.x - self.x1, p.y - self.y1) = clWhite);
+end;
+
+(*
+findDTM
+-------
+
+.. code-block:: pascal
+
+    function TRSMinimap.findDTM(dtm: integer; var x, y: integer): boolean;
+
+Returns true if it finds the DTM **DTM** on the minimap. It will search
++/- 15 degrees of the current minimap angle. It will pass the coordinates for the
+first DTM it finds to x and y.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 15 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      x, y, dtm: Integer;
+    begin
+      dtm := DTMFromString('heapsoftext');
+
+      if minimap.findDTM(dtm, x, y) then
+        mouse(point(x, y), MOUSE_LEFT);
+*)
+function TRSMinimap.findDTM(dtm: integer; var fx, fy: integer): boolean;
+var
+  a: extended;
+  i: integer;
+  searches: T2DExtendedArray;
+begin
+  result := false;
+
+  searches := __createSearchAngles(self.getAngleDegrees(), 15);
+
+  for i := 0 to high(searches) do
+    if (findDTMRotatedSE(dtm, fx, fy, self.getBounds(), searches[i][0], searches[i][1], 1.00, a)) then
+    begin
+      result := (self.isPointOn(point(fx, fy)));
+
+      if (result) then
+        break();
+    end;
+
+  if (result) then
+    print('TRSMinimap.findDTM(): Succesfully found dtm at '+copy(floatToStr(a), 0, 5)+' degrees');
+end;
+
+(*
+findDTMs
+--------
+
+.. code-block:: pascal
+
+    function TRSMinimap.findDTMs(dtm: integer; out points: TPointArray): boolean;
+
+Returns true if it finds the DTM **DTM** on the minimap. It will search
++/- 15 degrees of the current minimap angle. It will pass the midpoints of
+all the DTMs it finds to **points**
+
+.. note::
+
+    - by Olly
+    - Last Updated: 15 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.findDTMs(dtm, tpa) then
+      writeln('Found at least one DTM match!);
+*)
+function TRSMinimap.findDTMs(dtm: integer; out points: TPointArray): boolean;
+var
+  searches, angles: T2DExtendedArray;
+  i, hi: integer;
+  tpa: TPointArray;
+begin
+  searches := __createSearchAngles(self.getAngleDegrees(), 15);
+  hi := high(searches);
+
+  if (hi = -1) then
+    exit(false);
+
+  for i := 0 to hi do
+    if (findDTMsRotatedSE(dtm, tpa, self.x1, self.y1, self.x2, self.y2, searches[i][0], searches[i][1], 1.00, angles)) then
+      appendTPA(points, tpa);
+
+  self.filterPoints(points); // remove points off minimap
+  result := (length(points) > 0);
+
+  if (result) then
+    print('TRSMinimap.findDTMs(): Succesfully found '+intToStr(length(points))+' DTMs', TDebug.SUB);
+end;
+
+{*
+_isValidDot
+-----------
+
+.. code-block:: pascal
+
+    function TRSMinimap._isValidDot(dotType: integer): boolean;
+
+Returns true if **dotType** is valid.  Compares to the minimap dot constants.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (not minimap._isValidDot(MM_DOT_NPC)) then
+      exit(false);
+*}
+function TRSMinimap._isValidDot(dotType: integer): boolean;
+var
+  arr: TIntegerArray;
+begin
+  arr := [ MM_DOT_NPC, MM_DOT_ITEM, MM_DOT_PLAYER,
+           MM_DOT_FRIEND, MM_DOT_TEAM ];
+
+  result := inIntArray(arr, dotType);
+end;
+
+{*
+getAllPossibleDots
+------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getAllPossibleDots(const Bitmap: Integer): T2DPointArray;
+
+Returns all possible minimap dots.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 4 September 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    atpa := minimap.getAllPossibleDots(bmp);
+
+*}
+function TRSMinimap.getAllPossibleDots(const Bitmap: Integer): T2DPointArray;
+const
+  BORDER_COL = 65536;
+var
+  i, j, Hi: Integer;
+  TPA: TPointArray;
+  Rows: T2DPointArray;
+  p: TPoint;
+begin
+  if (not FindColorsBitmap(Bitmap, TPA, BORDER_COL)) then
+    Exit();
+
+  Rows := FindTPARows(TPA);
+  for i := 0 to High(Rows) do
+  begin
+    Hi := High(Rows[i]);
+    for j := 0 to Hi do
+    begin
+      p := Point(Rows[i][j].x - 3, Rows[i][j].y);
+      if (PointInTPA(p, Rows[i])) then
+        Insert(TPointArray([p, Rows[i][j]]), Result)
+      else begin
+        p := Point(Rows[i][j].x + 3, Rows[i][j].y);
+        if (PointInTPA(p, Rows[i])) then
+          Insert(TPointArray([p, Rows[i][j]]), Result);
+      end;
+    end;
+  end;
+
+  // Sort left to right
+  for i := 0 to High(Result) do
+    if (Result[i][0].X > Result[i][1].X) then
+      Swap(Result[i][0], Result[i][1]);
+end;
+
+(*
+getDots
+-------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getDots(const dotType: Integer; const searchBox: TBox; const Tol: Byte = 55): TPointArray;
+
+Returns all minimap dots inside **searchBox** that match the dot type **dotType**
+You can optionally adjust the tolerance **tol** *(default = 55)*
+
+.. note::
+
+    - by Olly
+    - Last Updated: 6 September 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    atpa := minimap.getAllPossibleDots(bmp);
+
+*)
+function TRSMinimap.getDots(const dotType: Integer; const searchBox: TBox; const Tol: Byte = 55): TPointArray;
+var
+  Bitmap, i, Col: Integer;
+  Dots: T2DPointArray;
+{$IFDEF GETDOTS_DEBUG}
+  Found: Boolean;
+  T: Integer;
+{$ENDIF}
+begin
+  Bitmap := BitmapFromClient(SearchBox);
+
+  try
+    Dots := Self.getAllPossibleDots(Bitmap);
+    if (Length(Dots) = 0) then
+      Exit();
+
+    for i := 0 to High(Dots) do
+    begin
+      if (Dots[i][1].Y <= 0) or (Dots[i][1].X <= 0) then
+        Continue();
+
+      Col := FastGetPixel(Bitmap, Dots[i][1].X, Dots[i][1].Y - 1);
+      if (Col = FastGetPixel(Bitmap, Dots[i][1].X - 1, Dots[i][1].Y)) then
+      {$IFDEF GETDOTS_DEBUG}
+      Found := False;
+      for T := 1 to Tol do
+        if (SimilarColors(Col, dotType, T)) then
+        begin
+          Found := True;
+          Print('TRSMinimap.getDots(): Tolerance = ' + toString(T));
+          Break();
+        end;
+      if (Found) then
+      {$ELSE}
+      if (SimilarColors(Col, dotType, Tol)) then
+      {$ENDIF}
+        Insert(Dots[i][0], Result);
+    end;
+
+    OffsetTPA(Result, Point(SearchBox.X1, SearchBox.Y1));
+  finally
+    FreeBitmap(Bitmap);
+  end;
+end;
+
+(*
+getColorPercent
+---------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getColorPercent(color, tolerance: integer): extended;
+
+Returns the percentage of the minimap occupied by **color** with **tolerance**
+
+.. note::
+
+    - by Olly
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    per := minimap.getColorPercent(123456, 12);
+
+*)
+function TRSMinimap.getColorPercent(color, tolerance: integer): extended;
+var
+  tpa, tpaMaxPixel: TPointArray;
+begin
+  findColorsBitmap(self.bmpMask, tpaMaxPixel, clWhite);
+  findColorsTolerance(tpa, color, self.getBounds(), tolerance);
+
+  self.filterPoints(tpa);
+
+  result := (length(tpa) / length(tpaMaxPixel) * 100);
+end;
+
+(*
+getBlackBackground
+------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getBlackBackground(): integer;
+
+Get's the most common black color that appears on the minimap. Useful for dungeons
+and upper stories of buildings.
+
+.. note::
+
+    - by ZephyrsFury
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      blackColor: integer;
+    begin
+      blackColor := minimap.getBlackBackground();
+      if minimap.getColorPercent(blackColor, 0) > 50% then
+        writeLn('We are inside the dungeon!');
+*)
+function TRSMinimap.getBlackBackground(): integer;
+var
+  i, currentCount, max, hi: Integer;
+  tpa: TPointArray;
+  cols: TIntegerArray;
+begin
+  result := -1;
+
+  print('TRSMinimap.getBlackBackground()', TDebug.HEADER);
+
+  findColorsTolerance(tpa, clBlack, self.getBounds(), 3, colorSetting(2, 100, 100));
+  self.filterPoints(tpa);
+
+  if (length(tpa) < 1) then
+  begin
+    print('Failed to find any shades of black', TDebug.ERROR);
+    print('TRSMinimap.getBlackBackground(): '+toStr(result), TDebug.FOOTER);
+    exit();
+  end;
+
+  cols := getColors(TPA, true);
+  print('Found '+toStr(length(cols))+' shades of black, finding the most common one...');
+
+  hi := high(cols);
+  for i := 0 to hi do
+  begin
+    currentCount := countColor(cols[i], self.getBounds());
+
+    if (countColor(cols[i], self.getBounds()) > max) then
+    begin
+      result := cols[i];
+      max := currentCount;
+    end;
+  end;
+
+  print('TRSMinimap.getBlackBackground(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+filterPoints
+------------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.filterPoints(var tpa: TPointArray);
+
+Removes all the points in the tpa **tpa** that are not on the actual map area.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 09 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    begin
+      findColors(tpa, clWhite, minimap.getBounds());
+      minimap.filterPoints(tpa);
+
+      writeln('We found ' + intToStr(length(tpa)) + 'points on the map!');
+    end;
+*)
+procedure TRSMinimap.filterPoints(var tpa: TPointArray);
+var
+  tpaMask: TPointArray;
+begin
+  findColorsBitmap(self.bmpMask, tpaMask, clBlack);
+  offsetTPA(tpaMask, point(self.x, self.y));
+
+  tpa := clearTPAFromTPA(tpa, tpaMask);
+end;
+
+(*
+isFlagPresent
+-------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isFlagPresent(var p: TPoint): boolean;
+
+Returns true if the flag is present on the minimap. If found, it's coordinates are
+passed to **p**
+
+.. note::
+
+    - by Home
+    - Last Updated: 29 July 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.isFlagPresent(p) then
+      writeln('Flag is present');
+*)
+function TRSMinimap.isFlagPresent(var p: TPoint): boolean;
+var
+  i, bmp, l: integer;
+  tpa: TPointArray;
+begin
+  result := false;
+  bmp := bitmapFromClient(self.getBounds());
+
+  findColorsBitmap(bmp, tpa, 65536);
+
+  l := length(tpa);
+
+  if (l < 1) then
+  begin
+    freeBitmap(bmp);
+    exit();
+  end;
+
+  for i := 0 to (l - 1) do
+  begin
+    // to avoid out of range errors
+    if (tpa[i].x < 1) then
+      tpa[i].x := 1;
+
+    if (tpa[i].y < 1) then
+      tpa[i].y := 1;
+
+    if ((fastGetPixel(bmp, tpa[i].x - 1, tpa[i].y - 1) - fastGetPixel(bmp, tpa[i].x, tpa[i].y - 1)) = 6381921) then
+    begin
+      result := true;
+      p.x := tpa[i].x + self.x;
+      p.y := tpa[i].y + self.y;
+      break;
+    end;
+  end;
+
+  freeBitmap(bmp);
+end;
+
+(*
+isFlagPresent (overload)
+------------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isFlagPresent(waitTime: integer = 0): boolean; overload;
+
+This overload returns trueif the flag is present on the minimap within **waitTime**
+*(default = 0)*
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 1 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if (minimap.isFlagPresent(2000)) then
+      writeln('Flag is present');
+*)
+function TRSMinimap.isFlagPresent(waitTime: integer = 0): boolean; overload;
+var
+  p: TPoint;
+  timeOut : LongWord;
+begin
+  timeOut := getSystemTime() + waitTime;
+  result := false;
+
+  repeat
+    result := (self.isFlagPresent(p));
+
+    if (result) then
+      exit(true);
+
+    if (waitTime > 0) then
+      wait(15 + random(25));
+
+  until (getSystemTime() >= timeOut);
+end;
+
+(*
+getFlagDistance
+---------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.getFlagDistance(): integer;
+
+Returns the distance from the player (i.e. the center of the minimap) to the flag.
+Returns -1 if the flag isn't present.
+
+.. note::
+
+    - by weequ
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    dist := minimap.getFlagDistance();
+*)
+function TRSMinimap.getFlagDistance(): integer;
+var
+  p, c: TPoint;
+begin
+  result := -1;
+
+  if (self.isFlagPresent(p)) then
+  begin
+    c := self.getCenterPoint();
+    result := distance(c.x, c.y, p.x, p.y);
+  end;
+end;
+
+(*
+waitFlag
+--------
+
+.. code-block:: pascal
+
+    function TRSMinimap.waitFlag(dist: integer = 0): boolean;
+
+Returns true the player is within **dist** of the flag within 20 seconds.
+
+.. note::
+
+    - by Nava2
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.waitFlag(10);
+*)
+function TRSMinimap.waitFlag(dist: integer = 0): boolean;  // Developer note: make a waitTime variable
+var
+  m, t : LongWord;
+  d1, d2: integer;
+  p, c: TPoint;
+begin
+  result := false;
+  m := getSystemTime();
+  t := (m + 20000);
+
+  repeat
+    if (not self.isFlagPresent(p)) then
+    begin
+      result := true;
+      break;
+    end;
+
+    c := self.getCenterPoint();
+    d1 := distance(p.x, p.y, c.x, c.y);
+
+    if (d1 <= dist) then
+    begin
+      result := true;
+      break;
+    end;
+
+    if (d1 > (dist + 12)) then
+      wait(450 + random(70))
+    else
+      wait(50 + random(50));
+
+    if (getColor(6, 56) <> 13092807) then // border of the loading message
+      if (getSystemTime() - m > 5000) then
+      begin
+        if (d1 = d2) then
+          break();
+
+
+        d2 := d1;
+        m := getSystemTime();
+      end;
+
+    if (SRL_Events[EVENT_ANTIBAN] <> nil) then
+      SRL_Events[EVENT_ANTIBAN]();
+
+  until (getSystemTime() > t);
+end;
+
+(*
+isPlayerMoving
+--------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isPlayerMoving(shiftInterval: integer = 500): boolean;
+
+Returns true if the player is moving (i.e. walking or running). If the pixel shift
+of the minimap across **shiftInterval** *(default = 500)* is > 200, it returns true.
+
+.. note::
+
+    - by marpis
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (minimap.isPlayerMoving()) then
+      writeln('Player is moving!');
+*)
+function TRSMinimap.isPlayerMoving(shiftInterval: integer = 500): boolean;
+var
+  shiftBox: TBox;
+  c: TPoint;
+begin
+  c := self.getCenterPoint();
+  shiftBox.setBounds(c.x - 30, c.y - 30, c.x + 30, c.y + 30);
+  result := (getPixelShift(shiftBox, shiftInterval) > 200);
+end;
+
+(*
+waitPlayerMoving
+----------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.waitPlayerMoving(shiftInterval: integer; maxTime: integer = 20000): boolean;
+
+Returns true if the player has stopped moving within **maxTime** *(default = 20000)*
+
+.. note::
+
+    - by marpis
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+  if minimap.waitPlayerMoving() then
+    writeLn('We are no longer moving');
+*)
+function TRSMinimap.waitPlayerMoving(shiftInterval: integer = 500; maxTime: integer = 20000): boolean;
+var
+  t: LongWord;
+begin
+  result := false;
+  t := (getSystemTime() + maxTime);
+
+  print('Waiting while the player is moving...', TDebug.SUB);
+
+  while (getSystemTime() < t) do
+  begin
+    wait(randomRange(50, 100));
+
+    if (not self.isPlayerMoving(shiftInterval)) then
+      exit(true);
+
+    if (SRL_Events[EVENT_ANTIBAN] <> nil) then
+      SRL_Events[EVENT_ANTIBAN]();
+  end;
+end;
+
+(*
+radialWalk
+----------
+
+.. code-block:: pascal
+
+    function TRSMinimap.radialWalk(theColor, tol, radius, startRadial, endRadial: integer; flagDist: integer = 0): boolean;
+
+Walks the player to the furthest point found within the given parameters.
+    * **theColor** : The color to look for.
+    * **tol** : The tolerance on "theColor".
+    * **radius** : The maximum radius to look for the color. Should be less than MM_RADIUS.
+    * **startRadial** : The degree value to start looking for the color.
+    * **endRadial** : The degree value to stop looking for the color.
+    * **flagDist** : Optional. The minimum flag distance from the player. *(Default = 0)*
+
+.. note::
+
+    - by nielsie95 & NCDS
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.radialWalk(834782, 10, 100, 45, 135, 10);
+*)
+function TRSMinimap.radialWalk(theColor, tol, radius, startRadial, endRadial: integer; flagDist: integer = 0): boolean;
+var
+  sd, ed, direction, i: integer;
+  linear: boolean;
+  tpa: TPointArray;
+  c: TPoint;
+begin
+  result := false;
+  print('TRSMinimap.radialWalk()', TDebug.HEADER);
+
+  sd := startRadial;
+  ed := endRadial;
+
+  if (sd = ed) then
+  begin
+    print('Start and end raidal are equal, using linear walk algorithm');
+    linear := true;
+    direction := sd;
+
+    if (direction < 50) then
+      sd := ((direction + 360) - 50)
+    else
+      sd := (direction - 50);
+
+    ed := (direction + 50);
+    sd := trunc(FixD(sd + 0.0));
+    ed := trunc(FixD(ed + 0.0));
+  end else
+    if (sd > ed) then
+      swap(sd, ed);
+
+  c := self.getCenterPoint();
+
+  findColorsTolerance(tpa, theColor, self.getBounds(), tol);
+  filterPointsPie(tpa, sd, ed, 10, radius, c.x, c.y);
+
+  if (linear) then
+    linearSort(tpa, c.x, c.y, direction, false)
+  else
+    sortCircleWise(tpa, c.x, c.y, startRadial, false, startRadial > endRadial);
+
+  if (length(tpa) > 0) then
+  begin
+    print('Found '+toStr(length(tpa))+' instances of color '+toStr(theColor));
+
+    for i := 0 to high(tpa) do
+    begin
+      mouse(tpa[i], MOUSE_LEFT);
+      wait(200 + random(100)); // wait for the flag to appear
+
+      if (self.waitFlag(flagDist)) then
+      begin
+        result := true;
+        break;
+      end;
+    end;
+
+  end else
+    print('Failed to find color '+toStr(theColor)+' with tolerance '+toStr(tol), TDebug.ERROR);
+
+  print('TRSMinimap.radialWalk(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+tpaWalk
+-------
+
+.. code-block:: pascal
+
+    function TRSMinimap.tpaWalk(color, tol: integer; sortFrom: TPoint; offset: TPoint = point(0, 0)): boolean;
+
+Uses a simple TPA sorting method to walk to a spot on the minimap. Returns true if walked
+successfully.
+
+    * **color** : The color to be found on the minimap.
+    * **tol** : The tolerance on color.
+    * **sortFrom** : The point on the minimap to sort found colors from.
+    * **offset** : Optional. The offset coordinates on the point that's clicked.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.tpaWalk(288937, 10, point(minimap.x2, minimap.y1), 10);
+*)
+function TRSMinimap.tpaWalk(color, tol: integer; sortFrom: TPoint; offset: TPoint = point(0, 0)): boolean;
+var
+  i: integer;
+  tpa: TPointArray;
+  p: TPoint;
+begin
+  result := false;
+  print('TRSMinimap.tpaWalk()', TDebug.HEADER);
+
+  if (findColorsTolerance(tpa, color, self.getBounds(), tol)) then
+  begin
+    self.filterPoints(tpa);
+
+    print('Found color '+toStr(color)+' on minimap');
+    sortTPAFrom(tpa, sortFrom);
+
+    for i := 0 to high(tpa) do
+    begin
+      p := tpa[i];
+      incEx(p.x, offset.x);
+      incEx(p.y, offset.y);
+
+      if (not self.isPointOn(p)) then
+        continue;
+
+      mouse(p.rand(3), MOUSE_LEFT);
+
+      result := self.waitFlag(3000);
+
+      if (result) then
+        break();
+
+      wait(15 + random(50));
+    end;
+
+  end else
+    print('Failed to find color '+toStr(color)+' with tolerance '+toStr(tol)+' on the minimap', TDebug.ERROR);
+
+  print('TRSMinimap.tpaWalk(): '+toStr(result), TDebug.FOOTER);
+end;
+
+{*
+_getSymbol
+----------
+
+.. code-block:: pascal
+
+    function TRSMinimap._getSymbol(sym: integer): _TRSSymbol;
+
+A symbol bitmap should be the whole symbol without the transparent parts of the
+blue outline. The color should be the most common color in the symbol, most of
+the time this is the background color. When making a bitmap, the background
+(i.e., the area not part of the symbol) should be color 0 black.
+
+.. note::
+
+    - by The SRL Development Team
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    sym := minimap._getSymbol(MM_SYMBOL_BANK);
+*}
+function TRSMinimap._getSymbol(sym: integer): _TRSSymbol;
+begin
+  case sym of
+    MM_SYMBOL_BANK: // 10 September 2014
+      with result do
+      begin
+        name := 'Bank';
+        color := 594228;
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bj3Nbv53ZjAcBFfw8v+37ibV1WTlRfhFQ5BsSX1SdtftoVEAEXBCoAKjsy9HVFibuLNzaQMQmaiJfNEVn+RmdrXfk8idwKthDxC1N3L8eX/PlyCqISnZRE+W2Nca7HutvuKW39Z7htvvaC07yaHgApYAKgMo+HFhmYewG5ApYROutvqo184iAf6HkjENSia2y2RPZhI1BKo3dPh5Y9nrfEnMjVyBX0C5Rf/09jcn7BF3TNJedZ+XXYxc1hdgOVPBm35JXu+ZbGHuw8+lzyztozTxpvPuD5pIrohP3sPDrs/LoAMWBCKgAqOzF1tlWpl4c/EacAsZ8ql7aM44Z7fxkuu+H/rr7wmYxnEKmQClLYw+gsscbplqaeHIKmoCQgDGHkKFk2ybl1k0mm97rzrvMrxUAFAcqeLxh2sO1kyyMoSp5FVw4RYxUW9YIW8dqtOw0WvtCzCkbKA5UAFR2d2WflakPt4glj6yjRuMWtdp1vOkTBd2zDeZdN5h7XdgsDigFVABUdnNxp6WJN4+olZB2kFbTdsP5N42XPTBe9tBw7nXV3Hm84jZAKaACoLLr89sswCqBiF/eRdqnXLVxs3LBAhmfCl4pO4g4UMG1+W1X57bMrSzqLSwEoorEdGEpOz6jCB45JxEpeyAXIg5UcHVu69H+imP95cf6K05Mqjo7vX5KcaGojCMQARlALlDwGFgBUBkDKjgzuaYtIxOIgAwGQgBsCLoJQAAAS+YFpA==');
+      end;
+
+    MM_SYMBOL_OBELISK_MINI:
+      with result do
+      begin
+        name := 'Mini Obelisk';
+        bmp := BitmapFromString(15, 5, 'meJxjYGDYjwTO75ymWJUpaO7FKyw' +
+          '7f/58ZCkGMEAW0QrM8q3vAapPz/AgqFg2wguoGEhyKfHhVwx0w4NH' +
+          'D4AIaL5TQh4Q4VEMcQNQDVA90HAeRStkw4EqAbnwdxs=');
+        color := -1;
+      end;
+
+    MM_SYMBOL_MINING: // 21 September 2014
+      with result do
+      begin
+        name := 'Mining Site';
+        bmp := BitmapFromString(16, 19, 'meJyNkvluElEYxXkJ/7BBlimUgb' +
+        'INqxS1gKCFYqslQUoBSdlqoAyFAkFZyjoUyjKURFNQmhisywMYE5s' +
+        '0MSUxafSV/NJJ1DREPTmZ3HvOL/fOnbk02m/1e6NW6yVJDtrto05n' +
+        'AO52h/3DEW2aisX2yord5wsGgiGFUqtS36G8uuooFTtXYKLW39pKz' +
+        'HL5Hz+McTxCZyIMNocyjy8KBfF8rvkLdgWy1Qqp092nM9jff3yrE6' +
+        'UbTISFcJmXPEuA3TTbrbHG7dSQ4itl0r8ZQbgowkEvLiYnJ8ewPiq' +
+        '/JbG6UUcc8Td4kR7LXdL6ywD7QplSvikSy2BnhVJ5evrpfPLVUxtw' +
+        'Mm9nEmO6M3d94cGMUI0IpOlk0eMO7tf6y+ZH8OZggyf8+ezL+eQs1' +
+        'h5cM7gYHD57do6qwIDVaz2iQmo0i3OokMubVxsteDb//t0o9zyNCk' +
+        'QQwmEpQwsYUe7uJkqJ2DNIUIEYAJEY2w77j150TCYjhAKhFMyfl0A' +
+        'FWDyWgyO06v21h48hnBdh0EoxeTwaikVCQjEGCRgqAFpEn/o+8Z0C' +
+        'UW4r1VqoxFIFPDG5atPr1ut1FA8VsdfcuVyc0kGlE/A+lWBKsEy9q' +
+        'Lm3rrprV2n1VAIVAH/+X493m8jvm4wWuXZJYw0vrKXBMIAphFA92Q' +
+        'hcuRLVHPHq8PWb4djqTGHWXaklbnUmYQphNUtMvXLrNlc5Uy5mG7K' +
+        'lKLiUb8PUYduYClMyGZa7NdLmToNhYNSb/wJTKqT2KvkDcCFZ+CdM' +
+        'qVvtgv8TBuEhPBrEp1Y/AQCS2Ls=');
+        color := 2390438;
+      end;
+
+    MM_SYMBOL_TRANSPORTATION: // 10 October 2014
+      with result do
+      begin
+        name := 'Transportation';
+        bmp := BitmapFromString(14, 18, 'meJxjYEAAZiamG1sXvDy8Gohubl' +
+        '0A5DJgACYmpie7lxxb3NdWmJoeHQxEQAaQ+3TPEhYWZrgyIPvjkVV' +
+        'Ta/Oc7O2sbWxs7eytwcDJwQ4oCJQS5OOBqHyyY/7sxiIHO1t7Bwdn' +
+        'JODkBFRrC5QCKoCoPLW419XJwdHREaLAxcXFITzd2cUVyAYKAqWAC' +
+        'lhZmC8u7W0rTHGwB5nm5uLi6ekJZBiXr7Du2+/gGwxkA6WACi4t63' +
+        'u8ZVZaTBjILFcPJ98Ip5Bk+9A0/dqtapPuG089a5tW7ejulRkb9nT' +
+        'b7GdbZyWEBTj6hrrk9ltU7DNovKTbeUu1+650122FyXfVpl3RyZ8U' +
+        'FxoAVPZk47T4mDDPqslGRTvkMi5IZZ6RKjwpVXcBqFKq87Js+RoDj' +
+        '9DoAC+gsgfrJsfnZ1jmdKpFTVN0r9Ww8Nc2MJWP7ZesOSWXMlnf2t' +
+        'nGxiY60Beo7M6K/picVKPwXB1zF1NTM3t7e1sbG62wKvXgEhMLa1t' +
+        'bW6AP4oL97qyccGtpT1RWsp6ds4W5BVDQHQjc3B3cfOwdHIHhCQm3' +
+        'uCBfoLLrC9sikmJNTU3t7OyAqjzBwN3dAxRobh4u4FCNDfQGKru2o' +
+        'K25ILUgKSY3PsLX08MdCfh5exYmRZekxLbnJgKVHZ9UdXxy9YlpDa' +
+        'dnNs2pyYXEEhg5A7lAQaAUUAFQGRMjIxCxMDFxsbOdnFK9oqXE3tY' +
+        'WiICM01NrWYApjxEEgCRy2gMKn5hYOasiC4iO9Zezs7EiyzKiKmZj' +
+        'Zd3bWQRELMzMDKgAABJW9+Y=');
+        color := 4342338;
+      end;
+
+    MM_SYMBOL_SHOP_MAGIC: // 9 October 2014
+      with result do
+      begin
+        name := 'Magic';
+        bmp := BitmapFromString(14, 17, 'meJx9jN1LU3Ech9v0r2hsc2ddhI' +
+        '1lunlm0+XqHFu5c7aJ2ZuOCE5q2uiFMtQILwx622CziIxeKEaUxUI' +
+        '9lGR14aIgHYEEUeCFNxLdBFLZVY87MYKgw3Px+Xy+z/mtFPRfBf37' +
+        'u/H/8HNOXynoP94+Sp5M9LbHSyQTGvy9nD/ei7acfxCRFYfDIwhew' +
+        'eEVBM/RcBMQGA0ikoK2PIOpUtc5fVBhdU13twDBWFZNWUX79irLL4' +
+        'bJswG3d7qjCQjCn7EWAe3ri3vKtrBTEBnt9k03WqWnu7cAwWarMnY' +
+        'EtC9Tt5StzbyJVul0P9sbfLLTAwQqIycEtKXJ66GGUKXg7qoXH8f8' +
+        'uiqOBdYDgar5fZwQliZHF3NX1KCc3b994kC0uX5XZ01geE8rEKiMn' +
+        'BAWc1cXHqa7Y8p8IjYeDzeIbWX2SONABghURk5dUWVhLP0pezm0Oa' +
+        'jvk94fVvMHd+SidY39I0CgMnJC+Hw/+fHuBblOtltcZyS/3i6/jMv' +
+        'PW0QgUBltazcgoH24fU7yyRZLtcVSZbNuDLpq2qo9QKAyckJAm785' +
+        'fGfgWObEERg6pDkqaq3WVQhDnZqxI6DlU32vU6fhTbp/7trZ0VMJH' +
+        'CBQGY3rTKpvTfEzmUxGmM0MXuzRLvVosyODZWazqfiZCeXlJaf05Y' +
+        'uP/Lv/BlD/Cwc=');
+        color := 11288104;
+      end;
+
+    MM_SYMBOL_WATER: // 21 September 2014
+      with result do
+      begin
+        name := 'Water';
+        bmp := BitmapFromString(16, 19, 'meJyNkv9rEmEcx/1LaurpnVNPd+' +
+        'cX3HW25la4Su1a6NgvrRgorbJ0LZSp7TzPDfVuuwXRrEbZF4IgKGJ' +
+        'QbT9s0KAgoqJBP/VT0V/Re11YLKN9ePPw+bzfr+Oe57kzGH7Xoras' +
+        'qk1FWWoLo6YtGzrVlVI9Gkv4/EGot3dbeh+NJkql+g64ImnJ5EXS5' +
+        'tzTRUCRfjuk9zARSdLCn3xZnN/fd2ivkegyWWyUVcn4qhMsSVqMZi' +
+        'tMRADasFiqnT41YSIoo5kEH+53bLTCT2rcAGczESR8CACwXzsvzDl' +
+        'pBqbZYgOvTfPvnwkvr/HSORYjTEQAgAGWpfnD4WMwLaQdq5ehttZG' +
+        'Pq3G15rB1es846IIazeECJgsLVRENRAIAsa54E+Os18/JL+8Htt8e' +
+        'HC91ZceY2AislIOYLKoXJ4sZtN5jDa7C+tdZd+3j6nvW2fercQ2Hh' +
+        'y4NcvpER4BVi03sKW6vCjE4lQ3Dd1W+LcrRz6vj7x5Gt58FLo5x+s' +
+        '+gHr1qn7ebDonzzR8fs7u7DkRY1/cD716PAg9vxcSIgxMRACmMoX2' +
+        'ldbKjfGTKdrtcdCMEPEUs1whwx0dYp0u1uX2IKqXlR2fWC5UBweGH' +
+        'HQP7d5mIDS4RpiIzqYu/M03tRt3llrDQpxh/RAajDCrxdmOvxxKyk' +
+        'szOdHjDXi9ATRSvvIvsl2qpMaPjyaGR9H8F0aVcyL2Jk/LaHbD/3y' +
+        'FAu0SRk2dvwR1jH4ANBvVhQ==');
+        color := 13744208;
+      end;
+
+    MM_SYMBOL_FURNACE: // 9 October 2014
+      with result do
+      begin
+        name := 'Furnace';
+        bmp := BitmapFromString(14, 20, 'meJxjYAABRkZGMMm0b+n0d4dXvz' +
+        '20au/CSRBxRiYmEMXEDOIyMTGzsAB5Lw+svLJ6SoirTYS77Z11U14' +
+        'dWMnCzAyUhJjDACbfH1t/f/PsiaWpUhLi/Hx8QCQpLjq5LP3x9nlA' +
+        'KS5ODqChQGWPdy5a3lYS5Grn7OQYFxeXnJSckJAQERFha20V4moLl' +
+        'Hq2exHQ2HcHlxdG+anIy3h4eERFRTknl1tWLwYit7RKoGIbGxtlOe' +
+        'my+OA3exe/3rvYSl9LR0cnITHBsWK68dqPRpt+ARGQ4VY7OyQ0RFV' +
+        'F2c5Y99WeRU93LrDU00xOTgnMKLFb+9hm///A0yAEZDhueBaWW+np' +
+        '6WljpPtkx/yn2+ZY6Wvk5OT4107wOPLD8+S/1lf/gQjI8Dz6M6Zrb' +
+        'lhYmK2RzuPNs55snmVnpJOfnx/cPjP48r+U2/+W/vkPREAGiDtjVX' +
+        'h4uKOZweNNMx+smwZUWVBQED9xftz1HxPf/ljyDYSADCA3b/7amJg' +
+        'YRzPD+2un3F0z2d5YN7+gIDsnu6KiohoVlJWXg1Ua3Fk16e7qSWWx' +
+        'gdFhIfY4QLCfd2VS2PXlfUyMjOfmtCxtKgj3cFCUl5OXlZGVkQaSQ' +
+        'ATkRno7L28pPjO7lRGSBhgZz0yvPzu7pTw2QFFOVllRXkURqFC6Oi' +
+        'Xy7PzOI5NrGRigyQiienpp5tFJ1ToaqipKikCkq6l+ckbjhIIUYOq' +
+        'BphAGRnBCYgKmmTXNRa0poWrKSkDUnZ+4vD4PYiNQEQsLKwPMAUCQ' +
+        'HxN5tL/CyczQxcoUaGBGeCjMNARgZmaBME5Prm5OCmnPijnSVwa0C' +
+        'KESXQtjXUrMwd6yAz0lpTGh8LwASe2oCkHZYEdrwbraTJiLmOAyAB' +
+        'SwEQU=');
+        color := 5360639;
+      end;
+
+    MM_SYMBOL_ANVIL: // 21 September 2014
+      with result do
+      begin
+        name := 'Anvil';
+        bmp := BitmapFromString(14, 20, 'meJxjYEABl7YvfXdo1dtDK/fO7w' +
+        'Fy2djZGFmYIQiuZvnE5leHVl1eMyXMzTrS3fbO2ikv9i9jwADvj62' +
+        '7v3l2T2EiHw83IxgAGX3FyY+2z3t3dC1QATsnO5B8tGvx8tZiFwsD' +
+        'djY2RiTAyc7maWW0or302e5FQGXvDiwviPKTkxJjZ2fDiuSlxUvjg' +
+        '17vWfx672JLfU0uLk48yNZY59WeRU93LrDQ09i+buXODauBaBcMLZ' +
+        'szVVVFWV5ORkZa0tZE78mO+U+3zrHQVU+Ni2qrLV84fQJQARAtnTU' +
+        'ZSK6cP3P+tP7i7FRXK5PHm2cBka2RtqioiI6WemFmytxJPbMndHbW' +
+        'V2Qnx8eEBTnaWgHNdDI3fLRp5v110+2MdUVEhIHIy81paldLS3WJp' +
+        'ZmxtJSkpIQ40ASguLOl0YP10+6smWJvoictJaWmrFSUk97TUtNQXu' +
+        'Dl4qikIC8pIQFUDiSBZt5ePenumsllsYEGWhq2lmYRQb5hfl5h/t4' +
+        'RAT4uDrZA7UCkr6Venhh2Y3nf4ob8c3NalzYWhLvbK8jJAqWA3oUg' +
+        'IDfCy3l5a8mZ2S3w2Dwzvf7snJby2AB5OVllRQVlBTmgsurk8DNz2' +
+        '45NqUGL+tllaccmV+toqKooKQKRrqb6yekNk/MTMBMJEKxvzm9NCV' +
+        'VVVgKinrzEFXXZWJVBwJH+ciczQxcrU6CBeJQBwanJ1U1JIe1ZsUf' +
+        '7SvGrrI72OdRXfqCnLD/QBb9KINjVUbihLhNTHACPw9VG');
+        color := 12234923;
+      end;
+
+    MM_SYMBOL_TREE: // 21 September 2014
+      with result do
+      begin
+        name := 'Tree';
+        bmp := BitmapFromString(16, 19, 'meJxjYECAgkn9lXUt6XXVQa2lwa' +
+        '1lzpPKXSaURrfVMGADHh1VttvnOa6YbjApT216vtL0fNmGWPm6aK3' +
+        'uTKfCZDTFJjvn6s0qkZtdJDY5Q3hqFt/GfvaJWSxZrqxZLvzVQcoT' +
+        'M/UaU+CKJdf0iG+ZyD0xhaXaj7HKm6nQi7kjgWVGPnOmK1OaI0uhB' +
+        '29DiExRsHyMO1CxqLsZz/xynhUNbB1xTLmuzNnOQPVMlQHM+R5MgR' +
+        'aMoWYMKfZMGY5c8Q7iKV4iTsYiecE8C8tY2mJ4/a15bHS5bbW4A+w' +
+        'Y85IZ42wZ3fW4zZUZ450YizyY053Ys1y5irwMciI5W0OYClL4DfX4' +
+        'NeRYHLR4XS0YAoOYvPQ57JQ5bWNY3VLZIi1ZQqwYw03YczzcE2L4Y' +
+        'xyZsmO47Px5LY0EDY04XHyZvfvZfaNZPbI5bPP49U3YnEwYHc25LV' +
+        'Q53fWTU7JVPG05gm25rYFaQvgsnHksE1jDZrOHTuF2yOczceY2suc' +
+        'y8eIyMOWy0lCwM40Ki8/IzJd1Neez0uDVVeXVUeMxNGOPms8Vt5Tb' +
+        'LofNKonLPJpP34VV30nIQMPWzjkuKq2suLaquEZVX09YT53fWFVQz' +
+        '5I7cRlPSD+/voOAjhS/upyArpqErqqWhUV4SNyZ05d6uif2t01ISk' +
+        'jX1DdU19ETN7LjCJ/J4VHDbRQgri0nq63qFRiYkVOYm1U4qW8mMAq' +
+        '8/QJzMwra6jtdXT21dPRFjby4PGvYHPK4jfyVlVRdnNzb6jrqKptm' +
+        'zZ6PnCRaatvnTpm/cOYia7cQftsUbrNoHRufhTMWAQVbatqxJrnw4' +
+        'KimyubKkgYpUx9pY/fKknogFyiIVTEEODu69TT1unhHOvrF9TT3OT' +
+        'm74lEMAXXl9bUVzbWVLbWV9QQVQ0BfSx8QEakYCHJy83Jy87FKAQC' +
+        '4ZMIO');
+        color := 231520;
+      end;
+
+    MM_SYMBOL_FISHING: // 10 September 2014
+      with result do
+      begin
+        name := 'Fishing Spot';
+        bmp := BitmapFromString(16, 19, 'meJxjYICC9pbOnu7pHe2TOjum9PTM6Oud2d83q79/9uRJ8xprmhlQQV5qallpvYuLt6GRuYmJlbm5rYWVg7WNk42tU1h4fGvTBDT1zS19c9bs6p69Ut/ITFhETExcUkJSRlpOEYi0dQzy86o6mhFaygpLi0vqNx6/tGzHkWXbj/bMWmlu4yQpLS8tIy8lqyAjr+Tm5tPa3A9X31DX6R8Q0TBhxqkHLw5cfThv7Y6umSsiU0qdfeJExSSkgBpU1DPTCttbQFY01TSWFNWqqmuHxCadefr2+qc/K3cfm750U8f0VUWN8/kFhETFJWXkFIH+amuZUFFc2dczw8c7SE5eSVlNc8qq9Rfe/Tp65+WybYemL9ta1DKPl5dPRFRCFiirqhEcFN3ZNqWnfZKtrbOyqibQXkev4Hnbju6+8mDrqeuLN+3tmbUc6B4hYRFZOUUlVQ1HR/eutskdTd2FueVaOgYKiqp6RjbGVk5hiekTlqxdve/kgnU7/UKi+QUEgX5QUtEoziuvq2jMSkjob58c4B8O9IKcooq4pLSQsKi0rLyTl9/kBasnzVth6+QODGELc5v8nNLooCCglzvq2xtrO80tbIBaFJXVgeEhKSUrIioOjIKW/pmzV+0obZqRlNMc4BcGD9L+9olJ8ekGhqZAh2lo6QE1yiuqAJ1hbG7TNXtjZdfyvPoFIYEI9R01ja11nZ6e/oZGZgZGZvoGJkCNQDcrqmjm1k1LKuwK8AtHSxITOiZP6589d+r80JAYI1MLI2NzP9+Q/IzC5OzqrNwKBmwgJzmtu7GrrrzB2sbBxs6xtaalJLckLiwSq2IIKM/Omdg2MS4qMS0pc0Jbf0FKCh7FEDC1Y0J3Q2dfS29XXRtBxRAwrWtqb0sfkYqBoKu2pbGsBqsUAAD08vg=');
+        color := 1842978;
+      end;
+
+    MM_SYMBOL_COOKING_RANGE: // 9 October 2014
+      with result do
+      begin
+        name := 'Cooking Range';
+        bmp := BitmapFromString(14, 20, 'meJxdku1PUmEYxs8LSPwDgszMxJ' +
+        'fMN3Bq2Uabc9NpNZuhNtzygw1xs1bL99TlZpYzFQHRA3hAxUOJKGy' +
+        'SYhagBJQvyzKdmhXl2mzVVn9BtxzsQ/euPbvu5/6dZ+ec50IQBMUx' +
+        'FMMQMCgq76j/7jGD5B110CJ0Bc0hg6IYg8FmH1ubGgrMj92TSUD79' +
+        'uEVmwENFnJUGI6vW7W/3NRkd0NMJI/FZID4xyNez00vGOROfTcNYx' +
+        'h24KJWjD13rpU01NZ63M4Vv9e35F595TMOaypLLvkNXQdOCuDfbqq' +
+        '/XipMjGtubDTqiBtSaVmFVFJxfWfN/6C9taaqSngqVlFf9WfR9PP5' +
+        'qCg9OYLLtU1byjv05eSMWOOg7M/qjPO5lc2DfT3c8HAAAPuxMAImO' +
+        'irqy6e9ja0PRaNeQdccv80q6rQ6XyzN2sw8LhcAwA5mdefTk1OTkg' +
+        'K72+/frAZ2tr5uvvv8dm1z+aVlwjSuJ/gnowEA7NsMkZMlEKSmfNz' +
+        'dXvZ7HY6nU5YJyjhCagdJzQClJxLiYgEAbN+mzslMS4iP39xY93s9' +
+        'jlm7ZfIJZTSQWvUwoSKHlDHRJwAALGBR5mULI3k8tULhcTntM9bHp' +
+        'jEDqdGq+9WK3psyaQSHk5edAdjehLym9EJibMzZrKwBlcJsNlHjI6' +
+        'RuUNn3qKH2dnLSaRgBABgDx1d194mm6kLRmYx0Qam4uKxULC6+fLG' +
+        'wQJiWCpswAgANFbJMtC+q2mRXCrgczj9BC5swgns8hGgWw1S3KrzK' +
+        'lpTEhDg+HwQGWtiE8BxeOr2GhQHLZDLHW2QPZRL4LSAw0DKDI2CYb' +
+        'DYdSzqf5fkin/Ju3rlMEBhJvugociEAihHGot/CK2+C0zqlV8HQB4' +
+        'Yih+NHoUZxHIe1uijX1dsIkhXlhj6EBoKeblksFv2Ib6DNq2z9L+3' +
+        'g/wL6zyKL');
+        color := 11052963;
+      end;
+
+    MM_SYMBOL_QUEST: // 10 September 2014
+      with result do
+      begin
+        name := 'Quest';
+        bmp := BitmapFromString(14, 17, 'meJxjYECAzTM73h7f8OXMlo8nN746vGbDtFYGbODN4dVnVkzvLCrOiE4Fop6yivOrZ78+vBpN2adja2Y1VOnoeIpK24d6x4Z6RYnJOOjp+y9ub/l8bA1c2bsjq1d0N5gY+6lqeEnJOmWHxGUGRUnJ2Kqqe1mYBm6e3P18zyKgsgvbll9cMU1D0zM2IKE/P3typN/l1tT9lbGTIv0m5OVG+0Rq6fje2jgPqPLVgRXN2YWCUh6G2p6biuPuTsq/1pF+ujHpzqT8DUWx2qoOfOIO3aU119dOf7Zzgb97rKC0V4C5575075NVUc8WNzyZV723OGR5tKObgZOAlEeob/rjrXMeb5nlYBN1urf4YnfOnQnZ96cVPZlVendS3uXujBu9mRe6c463Zzs5xD3eNPPu2ikRvqlCMj422o5zgm335/mdqok6VB6+Id1zsq+5laaDgJRbVEDqzdWTTs1t7yspE5EP0dUOXJESvCvLa32C87Jo+61pHovi/bTUfYRk/SdX1R+aAYqFKws6TUwTMjzCC70CEyxtlkU5zwu1T7GyzfMISHIKMDGNv7ZsMiQ8j02r29rdaGwUJaXgKyTjG2obGmTpKywXJKMcamwYtnNqz6GJ1fDAvzSnZUppubZBvJhSjI1hhKWun4h8qI5R8vTq+jMzGtAi9MTk2r6Ccln1BHHleFHFaCBjUkXDsSl1WBPJmWn108sqZTWSgGhWXcvJqdiVQcCpSVVdeeW9xfVnptTgUQYBRydUHO4rwxQHAMx/6QM=');
+        color := 14520942;
+      end;
+
+    MM_SYMBOL_MILL:
+      with result do
+      begin
+        name := 'Mill';
+        bmp := BitmapFromString(15, 5, 'z78DAB58F3B0AC0300C43AF24A' +
+          '75D3CD621BEFF9102D52228822C5D1EC69F878C8140CCA8AEE5D8' +
+          'DD0BA97C223BED3E5E27C48CBAE7B878ABF54987B5337FB3E995D' +
+          '26DF2973F323B33C9A9D26573A47303B52569D1');
+        color := -1;
+      end;
+
+    MM_SYMBOL_DUNGEON: // 10 September 2014
+      with result do
+      begin
+        name := 'Dungeon';
+        bmp := BitmapFromString(14, 17, 'meJxjYEABV7YufHl43YvD6y5uWcCAA9zcvvD8iolTqrKLYwNLYgOnVudcWjX5xvaFaMreHlu/qLnYxVw/Pjq6pqqhurIhNirSzdJgaVPBo52L4Mru716ycUK9lbFhbm5JSWldbHRMXExsWVl9Rka+jYnpkqb6qROhJl9dM83RzDAqMjYuNkFFSVmQX1iAl19VRSUmuiA+fll47K2gqCf+YbcPze+aVJampaqanZWvp63NxMikohqmqOgjJqYfErE/JPqpo+dVV8/dPj4Lb6+fnuTnZKStnp2RIysjw8zEam41IyTqbnDkZXf/+3auZ7R1suyMzOvTEx5unBniYmWko56dmiIrJcHMzGFht8kj8AUQufpcNjXNEBcRsTfSXtWcf21ZX3aYl5GOWmJSopSkJAsLt7P3bZjKC9a22TISEoneDrsn1qzvKp9Xk2WorRYTFSMtKcnPp2Dr8gSIHDyuWDlssLHv0FRWml6StLy1GOj360v7fOzNPd08ZSUlRYXVVNTSxUUNODgkxcWUTE1sgIF8cX4bJJS29ZbvnVzvZmMmKSrCycYCRxIiwrZGOlv7a9a3FMAD/8iMpnk12U6mutKignxcHEAkKSLoYKwzvzL96IRKtAg9NKFqZmmKvZGWirSYioyYrZHWnPK0A73lWBPJicnVi2pzgCY7m+kua8w/NqkKV3ICgqP9FdNLU2dXZBzrr8CjDAL29Jbv7sFiKQBz/cAx');
+        color := 7039084;
+      end;
+
+    MM_SYMBOL_WEAVE:
+      with result do
+      begin
+        name := 'Weave';
+        bmp := BitmapFromString(15, 5, 'z78DA33303230343074367472' +
+          '73724526CD0C4C0C8CDC1C0D2DDD2C5D8DDD8C4C0CA0E2103644D' +
+          'CDCD1CCD4C40CC246D66B0036D300AFC9986622B3293119979B21' +
+          'ECC1E966649793EA6600F03E685F');
+        color := -1;
+      end;
+
+    MM_SYMBOL_POTTERY: // 9 October 2014
+      with result do
+      begin
+        name := 'Potter''s Wheel';
+        bmp := BitmapFromString(14, 20, 'meJxlkt1PUnEYxzmHwNO68arWUh' +
+        'DkTY2osMVKZ02zGL04tijRacM4aOdM0EKczBdUSOcbAoKIViDoTGz' +
+        'zKhc3rW7K2lrrAi4q/5W+AiGrZ9+dfZ/n+/k92++cw+EcFUmScd/k' +
+        '73dxKL44iQmXyyMIogjhoOXz+V+3Q5/i8+xDHQTzZTtUDOBJUVTm7' +
+        'Xp6Z8k/YC4/fZLPOwbB+B10+k0QEUkCJI5TJQd70U13v77xCjyOFo' +
+        'QWQ0QHezEuSf7aDQ+Z7stF5Twej19CCVT1F3TtEAxaDBEB+Lm7nEk' +
+        'G1NXSE9lSG3q1tlizyQfBoM3Pq6XppD+zkydPCWQ3etdU1yfO35yG' +
+        'YNBimCMzrxfTW97aGllpaWmXiTHM7GvaNmr1EQhG7/nc0cEgOty55' +
+        'f2RmL2sVJSfKXvpW71r26yzfWjoTUFXmffNpnjEu4ro0lk5sO/Rac' +
+        '25KpFQtBXeHHYuVN1ekd+KQdLGZYd9fiMUFwkrAAD79sKjUSoqBMK' +
+        'o79V6ILbsmR13uFx2V9AzgzY0FRSWCQAA249MGLXXlApFwO33DLp9' +
+        'k76l5wEo4PGPWkfH+sZqZDKjtmF/ZQKvNOUdGrO0jT8dtnfbrSYr+' +
+        '4hlO1mmk2E6mGe0dcRsTC0MEdnCB03NOdactv4uFiltpOlW2mK0MO' +
+        '3m8CCLKMfkYIIkIwNdCWe3XCKRiCshhViYcPZgmP+XCIJHUTlDcrn' +
+        'rg4/trXeAScWVMGgL2zjZbYXN5ntNOy627qKqXq2CMbc0Ff63Q5Ml' +
+        'sTB7iPw4Z+8z6CCYwi3+L8yneozbThpy0w+KF/7jyez+5MgT6Oiyf' +
+        '4E/c6Hl3g==');
+        color := 2574498;
+      end;
+
+    MM_SYMBOL_WHEEL: // 27 January 2015
+      with result do
+      begin
+        name := 'Spinning Wheel';
+        bmp := BitmapFromString(14, 20, 'meJxjYEABS/vq3x9d+/bI2qW9tQ' +
+        'w4QG1u8tWNc+9um1+bGg5ET7bNvbZxdl1OIrKa9csWPDu05t2BFUt' +
+        'bixSkJdhYWIBIUVpieXvJh0Ornh5cs27xHKCyJb21Lw6sPDa/K9LL' +
+        'UUpGzsLRK7miPam8DciQlpFL8HU+Pr/rzf5lx1fPfn9oZVdBopayv' +
+        'IaecWnfwuzmqUnVvQkV3UBGUc98ZW1DoNTE0rQ3e5e83rPYykBLWF' +
+        'S0sGtOw6Ld+tauZk5eQGRs61a3cHd6y0whEVE7Y91Xuxe93L3QUl9' +
+        'Tx8w2rWm6iaNP67IDsbmVEZnldUsOAbmpjdM0DSyAKl/sXPB021xL' +
+        'PY3o/NrY0g4VXWPfuJz6xfvqF+1zjcxU1TWOL+vwT6+2MdJ5snXO4' +
+        '82zrAw0I/ObEupnesXlJtVOzOtfmdO3MqqsF8hNaZrln1lnb6L3aN' +
+        'PMhxum2xnpmDn7Rpd165hYJ7UsDCvuAiIgQ9fUJqKk28TR18nc8P6' +
+        '6qXfWTAaqlJFTyOlbnTNhg5GDl6mTLxABGUXTtqR3rZSWlXc0M7iz' +
+        'etK9NZPTAt00VVXMXQKTO5Y7haR4xmR7RmcBGckdK8xcgzRVlDJDv' +
+        'W+u6F/ZlH92dsv0igw/RysLJx/vlKqoyimRFZOBDHMnXz9n+5lVWW' +
+        'fmtC6uywFGU36k35kZDUem1ueGesnJK2rrGQARkFEYHXh0RtPJaXW' +
+        '5Yd7Isb+4KuPo5Gp1VRUVZSUgAjJOzWyaW5aKNTntn1RXnxCkqqwE' +
+        'RG3ZsWsacnElvAXt1Uf6yu1NDRwtTE5Mb8gN9cSlEghOT64BGtuSE' +
+        'X2svwyPMiDozY452Ft2oKesLs4fv0og2NVesKE2HVMcAF/BCX4=');
+        color := 7048357;
+      end;
+
+    MM_SYMBOL_GUIDE:
+      with result do
+      begin
+        name := 'Guide';
+        bmp := BitmapFromString(15, 5, 'z78DA33303400424717470B27' +
+          '33086961E168E4EC64E866E264EE0C614349170B0B4B336411143' +
+          '56059880906860848C06488995432193F89CB47F84D869A8FE14E' +
+          '8869F8CD24C664E2431E533DC44C00EBA66771');
+        color := -1;
+      end;
+
+    MM_SYMBOL_STORE: // 9 October 2014
+      with result do
+      begin
+        name := 'General Store';
+        bmp := BitmapFromString(14, 17, 'meJz7eWHbj7Nbv5/dggf9AqnZ/P' +
+        'Xkus6i3Ly4eDyot6zg6/G1n4+v9XPxVVIywYMC3f0/HVvz8fBKPxc' +
+        'fJSVTDS17y+D88K5ViQv2AxGQAeQCBYFSAW7+Hw6teHdgmZ+zj7KK' +
+        'uV1MlVvFfB33fHWbGCACMoBcoCBQyt/V793+pW/2LvZ18lbVsHbKm' +
+        'arpliFn4AVHQC5QECgFVPlmz6KXO+b7Onlp6DgHdO1wq1stZxIspm' +
+        'oFREAGkOvXvh0oBXTeyx3znm+b42XnqeeU4la51b1me8jEQ8ETDgA' +
+        'RkOFevd25ZLOuU7KPo8+zrbMfbZjuZu2h5ZTiWLTBJmmNVdQqq8iV' +
+        'EGSdsMYhZ72WY4qHndejDdPur5nsZuWuqONhk7HcInaZeegys5ClE' +
+        'GQRscw6ZRlQysPW6/6aKXdW9LtausnKW+h61pmGLjb0nQtHpiGLdT' +
+        '3qgFLuNh53lvfdWNLtYuEiI2OsqOmp69Fp6D0bjnRdOxU1PGVkTID' +
+        'Ou76469rCTohKIFJQ91Q3K9CwLAMiIAPIBQrKypoBnXd1QcfV+e3z' +
+        'K/MmFeUAUUNKspKiuZyCDRABGU1paWDx3IW1xZfmNJ+YVHV8YtXx/' +
+        'opTk6vPTaubWZSpqGgORHMqCs7NbDw1uebE5GqggsO9pUzMLEzMzC' +
+        'DExCTAy312Sk13RlJvbvrZKdWcbGwsrKzMLKyMjExsHJwMcMDICCQ' +
+        '42dmO95cDkagAHyMQMDHB5QGDShFh');
+        color := 3231133;
+      end;
+
+    MM_SYMBOL_SHOP_SHIELD:
+      with result do
+      begin
+        name := 'Shield Shop';
+        bmp := BitmapFromString(15, 5, 'z78DACDCC3112C0200844D12' +
+          'B611484920DE4FE47CA8CA63085BDCD9F6DF6511614BE233CEADA' +
+          '16ECFC9553204DD36055D92EF56E2AFD99DB038EDF97864927C8C' +
+          '339595EFD9D3CCD9DFC02CAE26976');
+        color := -1;
+      end;
+
+    MM_SYMBOL_ALTAR: // 9 October 2014
+      with result do
+      begin
+        name := 'Altar';
+        bmp := BitmapFromString(14, 20, 'meJxtku9PEnEcx4XjrP6FHvRjoT' +
+        'VmjpMkPdBDQPFcYCiiAi1qARvhWrn1C5iy6Vw129qB2RKWg83GBg+' +
+        'iEcayDZPNpvmg5rMewNZqQtJfYL3XTTPmZ+/d3p/3+3V3u923pubf' +
+        'CASC5RhXWY5D+QWuliQRCoVCwe7w2JHDh8q5+GYidNmohjYTwZ+5e' +
+        'C1okgTM30KKRJV8spgOz9xzSeqOnT19AoKZue8qpMOowIMkCGExG0' +
+        's+umPXd8gb69rkkhuX9BAMVoSoitkoyMr7mO/aQKv0zHmqnlXJhgz' +
+        'KTHhiMTIJwzIUQlQAtpei5ey8QSU/1yjuVjXZLqpGHfrK5wwEgxUh' +
+        'qgtMM7Dy2xd9mpZ2eYO1l/F5zB+ST3dK6xAMVoSojJqWrcXI9/RzU' +
+        'yftHOx6/Syw9Sm1U17/vb0BwWBFiMrURf94M/ctNTugU7itPQhL/5' +
+        'OlvyQqAMAKSa5Pq9AxMrtZG7hly7+a5d8OgxUhKgDACgmul2lmaGl' +
+        '/j9JpZb0e8y980ZcMjGNYhxCVsUMO7OvLx76rJjVNdbZRw4Z2p4V9' +
+        'N/9gKfrQZWGxIlTTUgDA8DfX5iYWJkddZlarpIzdtH/EMjZigcGKE' +
+        'BUA/qeTImIl6N+ITI05BqkGsVohhWCwIkS1d34wOC+hm/YVztskOS' +
+        'U+fhSCwYqQZ/afN0xi3DN93VYvPgnBYD0Q4/0q59W0yqCPIT9eVEX' +
+        'u8biuBb1TriFo9cnd/U+oIjGBK/256dsQzMFP2w3hUwF3atxNEEQV' +
+        '+QfjaRW+');
+        color := 16772815;
+      end;
+
+    MM_SYMBOL_ARROW:
+      with result do
+      begin
+        name := 'Arrow';
+        bmp := BitmapFromString(15, 5, 'z78DA33303570333470353437' +
+          '3372249E343633B33475829026161646E626C8B20660330D904C8' +
+          '6A841D6858BC454896C3EA6C9C498899FC465B2919BB1A5B12931' +
+          '24A69910715C269317CEC866229B0C001E5A61CB');
+        color := -1;
+      end;
+
+    MM_SYMBOL_BAR:  // 9 October 2014
+      with result do
+      begin
+        name := 'Bar';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bj3Nbv53ZjAf9Or/15/' +
+        'lt30+s7S7Jy42Jw4O6inKByr4cXRXg6qukZIIH+bv6ApWBVLr5Abk' +
+        'W1r7L1u968u7bi48/Tlx+GJlQoqRkqqxkAURABUBlnw4th5hp5xU3' +
+        'c/fZ159/zj77snfr5aSaXmOXKAPrIGVlC6CZHw8ue7NviZ+LD1Cll' +
+        'lNczobzzz/9MNzyWLl7v4JruKF3okVKk4qGDVABUNmrXfP9nL2VFM' +
+        '21XROq99x48fmn9YmPqnPPKLjFSigY6SQ0yavZeTl5A5W92DrL084' +
+        'TqFLPI7Ht4C2gSvsznzSXnFfxTZFRNtdJaJZVsfB09AQqe7xhmocN' +
+        'SKW+V1Ln4dtXP/x2Ov9Zd/UltZAMoEqNmAZZZQuggicbpt1fM8nN2' +
+        'gOo0sg3rfvonQ0v/jpe+Gy44ZpFWo2SnpN6eLWMkpm7jQdQ2Z0VfW' +
+        '7W7vLy5sZ+qb3H7m54+df16mfjbTd048qkXBMlrUKk5UyACm4v672' +
+        '5uMvV0k1OzlzTOjh/zqYpx2/bbr+qM327okuUiIiSpKS2jIwxUAFQ' +
+        '2fX5bUAGkCslpS+nbqnvHC7rEC6h6yQuDlRjABSHqAQquzq3ZWF14' +
+        'eSSvElFudWJ8bKyepKSelJSBgoKZo1pqUBxIAIquDq39Vh/xbH+8m' +
+        'MTKk5MrDo7rX5WWZ6CvBkQzSrLPze94cSkKqAUSEF/BQMYMDExMTI' +
+        'ysrGynJlS05OdCkRABjMzM1AQqoCFBcKAiwAZR/vKj/aXMzMzMaAC' +
+        'AIABJds=');
+        color := 4247795;
+      end;
+
+    MM_SYMBOL_UNDERGROUND:
+      with result do
+      begin
+        name := 'Underground';
+        bmp := BitmapFromString(15, 5, 'z78DA33303400422743' +
+          '272727134CD2D5C2C8D4D01993B47033303630B434B474B2C4A2C' +
+          'BC01001E96FB28B9BA3A10516335D5DCC8C4D9D293119D97C62CC' +
+          '24D5646412622631260300830265FA');
+        color := -1;
+      end;
+
+    MM_SYMBOL_TANNER: // 9 October 2014
+      with result do
+      begin
+        name := 'Tanner';
+        bmp := BitmapFromString(14, 20, 'meJxjYGBgZGQCYgYwOLR8xrvDq9' +
+        '8eXn1w6RRGmCBUFkwyMTEBydeHVl1eOzXM1SbC3fbOxhmvDqwAyzM' +
+        'itDAwvD+27v7mWT2FiXw83MzMLEAEZPQVJT/aNvf9sfXMzMwQIx/u' +
+        'WrystdjVwoCDjZWFhU3LJgKI2NjYgVwPS8OVHaVPdy0Cqnx3YHlht' +
+        'L+aqqaKqb+QlJqMpo17zkrXrOWK+q7iigZq5kFaOqZl8cFv9ix+vW' +
+        'extYEWv6CoaUCtfdJsi4jJRoGTDP36zUIm2sTNMPAsERASszPWe7V' +
+        '70ctdC630NXm4uSWVjAx8O7Q9O1Ud6oEIyND1qBWTAUkBVT7bOf/p' +
+        '1tnW+pr8fHyCwuJaTiVqjvXylhVApObUoGKTLSAkDJSyNdJ5smXW4' +
+        '00z7Yx0hIWFRMSk1B1LlGxrpE1LgEjJrkbVJldETAIo5WCq/2jjjA' +
+        'cbptsZg1RKq5poebcp2ddKm5cCEZCh6VYvpWwMlHI0N7y7dsrdNZP' +
+        'tjHVFJaQ1nIu1PVsU7atlratkrCoUrYo1PJs1HPNFJWQczQxur5p0' +
+        'b83kshh/PT0jBaNgKQUdYMiourWpOjeJy2sBuQoG/nqG1pWJoTeW9' +
+        'QFj6tzctiWN+SGutorycpKSUmq22Wr2RUAGkBvm4bispejM3DZWFm' +
+        'agSjZW1jPT6s7Obi6PDZSRlpaVU5aVVwUyqpPCz81tPTq5hhmcKoA' +
+        'JCZQCmJhmlGcdm1yto6GmoqQERLqaGidnNPbnJYLkmJiAKQGoFpJg' +
+        'mJhZ1rUUtaaEqiorAVF3XuLyulxIQmJmZoUkJKAaoC6gSGFCzNH+C' +
+        'iczQxcrs5PTG9JDAkBJFxsAWnF6cnVTUkh7VuzRvnJmFhZmFjZYWk' +
+        'ZogVjUmpV0qK/sYE9pZXwE0C4WVnasZkLAzvaidbWZkHQOdD1cHAD' +
+        'aCc2G');
+        color := 1783669;
+      end;
+
+    MM_SYMBOL_CHURN:
+      with result do
+      begin
+        name := 'Churn';
+        bmp := BitmapFromString(15, 5, 'z78DA9590410A00210845AFA4' +
+          'A5FE5A564CF73FD240CE40502DDA3C5CE8031F318150D1ACE94C4' +
+          '104C7D04365F159253E2C16A5737342B5735F6F6938E960D66430' +
+          '9B0D1B5292146ECD92156ABF1F013CD39DBE736D1E05FCF644FFE' +
+          '8BAC6A8FAF927AEB5338A958DF905A105631F');
+        color := -1;
+      end;
+
+    MM_SYMBOL_HOUSE:
+      with result do
+      begin
+        name := 'House';
+        bmp := BitmapFromString(15, 5, 'z78DA9D90410AC0300804BF6' +
+          '41B2DF66863F3FF2715BA978560A0BD0C32E2B228F766123D53BB' +
+          '33E5F5A08DC3ECD434550779BBBE9D3D1290C9846FDEC63EC02A8' +
+          '13D9B7F5C77AE9AF337B86DE4A5E1E0D7649EABE4F9F601C37765' +
+          'F5');
+        color := -1
+      end;
+
+    MM_SYMBOL_SHOP_AXE:
+      with result do
+      begin
+        name := 'Axe Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA95D04B0EC3300804D02B91' +
+          '0033F6127F72FF23A52A1BA4AA55BA1959483C036202E953A74F7' +
+          'EA6BBC35B260C403335377680767CEB92B7293FE59A71BEBE187D' +
+          '1136D2C7C583CAC6E0CCCABF7235B9A13A728B34EB2EA1E1F148E' +
+          'E8D8655CDECADF7C977D69FC8B1BA0269E2B27DEEDA9B13D63933' +
+          'EB356E4B7C6439');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_COOKERY:
+      with result do
+      begin
+        name := 'Cooking Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA8DCE410AC0300804C0' +
+          '2F194CDCE42896FCFF49856E0F421072D983BA83D2C56485C608E' +
+          '4C484236CA341999CBBFA7020A6CEFEDF74339B9CF3463E530A99' +
+          '4993ADDCA55C6D6F647E955B959CB757F22754F2F9ED8DBCCCD01' +
+          'B137B3CDAB290E76797E60B5A736560');
+        color := -1
+      end;
+
+    MM_SYMBOL_WINDMILL:
+      with result do
+      begin
+        name := 'Windmill';
+        bmp := BitmapFromString(15, 5, 'z78DA3330313033B074367' +
+          '6367536C745BA0181A11132E968EC68EA8853BD01D84C0324930D' +
+          '5C4C8D8C9C217A91D9C48840D8B84CC6741BB22E6412974A885F6' +
+          '8E1665C264348882C3289CB6DB848889900AC8467DB');
+        color := -1;
+      end;
+
+    MM_SYMBOL_MINIGAME: // 1 January 2015
+      with result do
+      begin
+        name := 'Minigame';
+        bmp := BitmapFromString(14, 17, 'meJxjYGBgYWFhYmKCkJ/ObPkCRK' +
+          'c3f7+wk5ODnQEDsLIwvzmy5vTyaZ0lpelRaUDUU15xfvXsN0fWMoI' +
+          'BUA2QFOTn/Xxszaz6ah0dT1EZBzXjUjWjYjEZRz19n0XtLUApRrBp' +
+          'QBvfHlyxoqtRQTNCVCFIUMpN3bRJzaReQMIZyFXUjNk0qfvFnsVAl' +
+          'SzMzJdWTVfX8FQzqTVwXKBj1mnru9PcbaWWSZOh00Il/QpNbd+b6+' +
+          'cwMTLe2zKnNb9AUMpdXDHC2HG5W9Rph8C91t6b7QPPGDosEpbx4Zd' +
+          'w7C6tubJmxpMd8wLcYwWlvWTV041sZ1l7rfNNue8addfIfpGWSauU' +
+          'crSgtEeIb/r9DTMeb57lYBNlG3jeyueifdBVx9AbDiH3rbyvmrgeN' +
+          'Xc/ZeFxxsTlkJN93IONM+6vnx7hlyok4yOuGK5hWK9vvdzAbqeOxW' +
+          'p1kymquhXiCqECUm5RAak3V048v7C7r7hMWD5YQjlOz3q5ruUiTeM' +
+          'pagZdWqYzNc3miypECssFTq6qPzazBeipyws6jUwTlA26FHW7pVWT' +
+          'NU0mqRv1yKqlKei0y2k1GJok3FgxmQEclSdmNGztbtTUTxWRCxGWD' +
+          '5LVqpNWKwMaJaoYqaYbt3Nq75HJtcAIYmFhZWNhuTS3dUppuZZ+nJ' +
+          'hSjLR6oYRyuqhiuI5R8vTq+rOzmnk4OSGxCSTZ2VhPTK7tKyiXVU+' +
+          'QUE4QVYwGMiZVNByfUsfCwgxPHoxMTECSg531zLT66WWV8hrJchpJ' +
+          's+tbTk2rA1qHnJDgSYWdlfXslJquvIqe4rozk6s52dk4ODiQVQKdC' +
+          'lYMNJuJnZXt2ITKw71lHGysQC7EEAgAAJSfz4Y=');
+        color := 1384791;
+      end;
+
+    MM_SYMBOL_TRADER_FUR:  // 9 October 2014
+      with result do
+      begin
+        name := 'Fur Trader';
+        bmp := BitmapFromString(14, 17, 'meJz7dWH7z3Nbv53ZjAcBFfw6v+' +
+        '3bibVdRbk5MbF4EFABUNnnI6v8XHwUFY2BSEnJDMQwcgUhRWNlJXM' +
+        'gAjKACoDKgMjf1VdR1UJFzwVIymvahG2+F7f9gaKOnaK6tZKuq4KG' +
+        'HVABUNnHg8uBWuTNA7Ub1molNJjk9vhM3xU+Z49r/Rzz/F7dhjWKH' +
+        'un+Lj6fDi5/vW+Jr7OPvJKZpG+easlC596NsTO35czbHT93t3nNEm' +
+        'mPdHlFU6CCN/uWvN4139fJG+gYaQ0btZxJftO3Fy/Y3bH2WNWqI/Z' +
+        'V02XULIFOBSoAKnuxdba3o5eykoWMgoFafItZRn/npjPLjt6JqF3o' +
+        '0bRARsEQKOVp5wVU9njDNC87DyVFM1ldJ4OyOZ7ty6sWH5y69WLR3' +
+        'F3uDQsVDN0VFc08bD2Byu6vmexm4yGnZC4XUqZRPNe+al5y97LK+X' +
+        'vje9fZVM5XCi6SVbJwt/F4uHby7WW9btbuUnqekkndIrrOMvah3jX' +
+        'zw9tWaDgGS5n5Sid2S7llutm4313Zd3Nxl6uVm4yssYysCQjJG1qW' +
+        'z3VrXikjbyQLEZE1BioAKru+oB2iUlbOTE7eXFbOVMEmQt07S0bOV' +
+        'F7eDCgIUQlUdnVe68LqwskleUDUmJ6qqGABlAUiBQUzIBciDlQAVH' +
+        'ZsQsWxCeVA8sSkqnMzGmaX5QPVABGQAeQCBeEKWFhYGBgYgCQ7O7s' +
+        'gH8/ZKTU92alAdLSvnJGRkRkMGMGAAQYgXG5O9mP95UDEBOEzMcFV' +
+        'AgDMPhIa');
+        color := 1842484;
+      end;
+
+    MM_SYMBOL_SHOP_ARCHERY:
+      with result do
+      begin
+        name := 'Archery';
+        bmp := BitmapFromString(15, 5, 'z78DAA5CE490AC0201' +
+          '044D12BB5560F71E910EF7FA4403A0B8318846CFEAA78143129A5' +
+          '8A2AD5769A9A29172F8385CD9B91253F1BBA4DDA964733A91A07D' +
+          '7FEC8A366A702C59D51DB9215140BF77804BCCC2E0D6136E7AE64' +
+          '37477FF5F35BBE0049C36545');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_STAFF: // 9 October 2014
+      with result do
+      begin
+        name := 'Staff Shop';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bj3Nbv53ZjAf9Or8NiL' +
+        '6dWNtZlJsbEwdEhbFx1UnxnRmJc/KTN5Sn7KpJ312TvrEiZWNzEVD' +
+        'Zl6Or/F18lRRNVJRM9NUtXAysk2xse3wdt8a7H83yO5bjvyPRbUFa' +
+        'KFAZEAW4+gFVqilbGmpY+ZjY5js7LghzO5nl+/3wvB/HFp4rCtmQG' +
+        'wlU9uHgMoiZcJUFzo6LItwudJb8ubD2z9lllyqjN+RGfDy0/M2+JX' +
+        '7OPkqK5spKlvrqVh5GNpn29nNyM06s23pnQc/tnpzD6T7LMkKByl7' +
+        'tmu/n5K2kaAlEmqqWdno2sX4RXdNXLW5pXx/jvCnOfVGY86T4IKCy' +
+        'F1tneTt4QVRqqFiam7pHtixMLGzNtTWud7dr9HIqc3WsCA54sXX2k' +
+        '43TPGw9ISq1zAIcquZapzTbGln7GVqEm9uFW9gFmdqkePoAld1fPd' +
+        'nd2gNkoImfWf5UzbhmJQ1rbRUTcy1rKx0QMtG0CnH2Aiq7vazX1cp' +
+        'NRd3BNGeSRlyzmIyenKyRsqK5ipIlBAF96mPrdndF383FXa6Wbsou' +
+        'qaoxzRJKZjIyJooKlhDHAJGioqW8giVQAVDZtfltQIa0rLGEkrmUt' +
+        'IGcnAVQpQIYycuby8qaARFQAVDZlbmtC6sLJ5fkTC7OaUxPBSqQkz' +
+        'OTl7cAMprSU6eU5AERUMGVuS1H+8uPAdGEipOTqs5Nb5hVlqcgbw5' +
+        'EQAaQCxQESgEVAJUxMDAwMjKCMCMjEyPjmck1Pdmp3dmpQAYjUIqJ' +
+        'CSLLxMTEAAMgETB5DGwLXBAiDmQBADYkEQE=');
+        color := 2236729;
+      end;
+
+    MM_SYMBOL_SHOP_CLOTHES: // 9 October 2014
+      with result do
+      begin
+        name := 'Clothes Shop';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bz3Nbv57ZjAcBFfw8v+' +
+        '37ibVdRbk5MbF4EFABUNnnI6v8XH0UlYyBSEHBCMJAQ0AFQGVA5O/' +
+        'qC+Qqa5oHZee2LJyjrG4ORO2L5oXkFgAFgVJABUBlnw6tADKU1M3c' +
+        'cvLcFswwmT/FICdbPyfbcN5k1wUzgIJAKaACoLI3+5Z4O3oqxsXqT' +
+        'e6UqSqWndSuNLMPiIAMIBcoqBgb6+PkA1T2atd8L3svKUsn8fQkMR' +
+        'c3uemdshPbQGhyB5ArkZYkbenkZe8NVPZi6yxPOy9ZeRMZZRNJvwC' +
+        'd6T2SPY1ApDujF8iVVjaSlTMBKnixdfbjDVM9bD0UFS3k5U2kwsNl' +
+        'exsluxqASLqvGcgFCgKlPGw9H2+Y9nDtJA8biEpTycgosbYaOJKIi' +
+        'ISqtPG4v3rSneW97jbuYJVm4n5BIjUloq01QARkSPgHAwXlFSzcrd' +
+        '1uLe25ubjLzcpNXsEcKCipaibi5y+SHA9Cfv5ALlBQTs4cqACo7Nq' +
+        'CdiBDVtZYTs5MVtZEVtZUVsZQVtYQxJA1AQsaAxUAlV2d17qopnBy' +
+        'SR4QNaWnKihYyMkBXWIBZAC5EHGgAqCyo/0Vx/rLj/VXnJhUdW5Gw' +
+        '6yyPJDb5M2ADCAXKHgMrOBIfzkDIyMDAwMjMwsrOwcbC8uZKTU92a' +
+        'lABGQI8HIxMTMDFTAyMzOClcEBEwsLLxcH2JAKDjZWNFkATYYAxg==');
+        color := 1673856;
+      end;
+
+    MM_SYMBOL_FARMING:
+      with result do
+      begin
+        name := 'Farming Spot';
+        bmp := BitmapFromString(15, 5, 'beNpjYGRgYDyAAwRZC' +
+          'Lir87iJ8c2fPx/IBarEpRiicj4M4FGMrBIuiKm4rKw0PSMDqBhNJaZiiEoIQl' +
+          'MJUgwAOf97Lg==');
+        color := -1;
+      end;
+
+    MM_SYMBOL_APOTHECARY: // 9 October 2014
+      with result do
+      begin
+        name := 'Apothecary';
+        bmp := BitmapFromString(14, 20, 'meJxjYmJmgAFOdva5reXvjq4FIi' +
+        'ADKMLExMTIyMjAyMjCzgFiMACZjLzcXFc3zL63bW5NajgQARlALkQ' +
+        'KqB5iFDsb27XN897sX7a0rVhBWpKNlQWIgIxlrUVv9y9lZWVlAGsA' +
+        'mv7i4MoTCzpjvOy5ONhZmJhjY8uBiIWZGcgFCp6Y3wlUwMrK8uHA0' +
+        'r6iJC1lOSAbiPi4ube0bd7Svpmflw8ioqkkB1QAVPZmz0IbI21ubi' +
+        '4I4uflmZrcBkR8PLxwQaACoLJXO+fZGGrBBfl4eScElwMRkIFQaag' +
+        'FVPZyx1wbQ20Bfn4hAQF3PdsV6f07I/u3B3Ytj+9w07UBCvLy8gAV' +
+        'vNw+5+nmmQ4mesJCQlaaxsu9668Gzb9t23/HoPu6Zc9y92pLTSOgF' +
+        'FABUNmj9VMcTPSBXE9D+wNObbf0ul4od3xU6n+m2nHEqtHdwBai8t' +
+        'G6KQ/XTgYyJMTFvY0d93u23DBoeqrZ+lqj45FW8xG7Zg8DO6AUUAF' +
+        'Q2d2V/RnBnpqqytpK6mW2Mbtc6g85NR5zatzvVF9qG62lpAaUygz1' +
+        'BioDRuyZOW3TKzP9HG10VTR8zZwDzFyAyNfUGcgFCgKlgAogsQ8Ex' +
+        '6c3HJ3eVBgVKC0lpaQgD0RABpALFARKQdIGKErBCWZueeqxyTXqKs' +
+        'oqSopABGQcm1IztyIVbBJMJZjBxMy8piG3JTVcVVkJiIAMIJeTmxu' +
+        'kDpIykUzODPU5OaXG0cwQiIAMIJeRGZF6GeDmgsHpKdVNKeFAdHJS' +
+        'BTQZYwNAqbrEkMO95Qd7y4EMiH/RDQOnakjy3tyYDUSYpgEAgpPZSQ==');
+        color := 15411336;
+      end;
+
+    MM_SYMBOL_SHOP_SWORD:
+      with result do
+      begin
+        name := 'Sword Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA95D0410AC030080' +
+          '4C02FD9C66CE25125FFFF524BBD08A5C520EC41964124269078F3' +
+          'EEE33FC5EF918535971A1B0C6000539B761D91D1A4C7A4829CCD1' +
+          '06293E5DCFF929BF231CEBAB92B47EE9A956FBC2FAF9859BE0057' +
+          'DB6637');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_PLATEBODY:
+      with result do
+      begin
+        name := 'Platebody Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA8DD0410AC02' +
+          '00C44D12BA56832761902BDFF910A9DCD8055DCFC850C4FD1BA85' +
+          'DDD5CA0B6CF48818F1E042633190A87D55B0CF349167534FD459D' +
+          'DBB92596EB2A527DC3DFC4FFE6EE446F7EC4A66CF65DDEFDFAC3D' +
+          '97E77F7E014609646B');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_SCIMITAR:
+      with result do
+      begin
+        name := 'Scimitar Schop';
+        bmp := BitmapFromString(15, 5, 'z78DA9DD04D0AC340' +
+          '0805E02B8D7FCF71399349EF7FA4A6B8A825109A203C5CE887D8A' +
+          '81D356962CA3FD9475FDD96AE581012880405E267A6D1B7CE0277' +
+          '61DBAB56CDEC6963A2F14CAE5AA69B0FF76ADE95315CBDA59FBB2' +
+          'AEAAAF50367F35A0630711C0AB697B1B9E9678223F3DAACF21B5C' +
+          '65625E');
+        color := -1;
+      end;
+
+    MM_SYMBOL_STALL_GEM: // 9 October 2014
+      with result do
+      begin
+        name := 'Gem Stall';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bz3Nbv53ZjAcBFfw8v+' +
+        '3bibU9JXm5MXF4UHdxHlDZtxNr/N38FJVM8CB/V9+vx1Z/PrLK3xW' +
+        'kUknZSkfH3dzc09DQU1vb00DfU1PTTUHRAqzSD6js48Hlfq6+Copm' +
+        'Fha1PT1vXr78v2zxr6rSnxvX/o+LfSQtnSevYAo088OBZW/2LfF18' +
+        'VFUtA8LvVhf/2PThh/ZaT8jg3+0Nn/X07utoLBSVs7az8UHqOzVrv' +
+        'm+zt4yMmYyMg2amnsM9fdZm721Nn1rYbbO0HCugkK2jIwpUAFQ2Yt' +
+        'tsz3tvBQVTSQkHCQlpyoo7DQ1eGxm8NjYeIaWVo20tC3Qnd6OXkBl' +
+        'jzdM9bD1UFSwVFAwkZD0V5Bfo6993sTgrIHBRAUFL6CgoqKZp70HU' +
+        'NnDtZM8bEAqFRUs5OSMxcUjtTWPmJnskpcLAnKBgkApoIL7qyfdXd' +
+        'nnbuMuD1IJUiwjYyIrWywvVwRkQJQBEVDB7WW9Nxd3uVm5yclBBYF' +
+        'ITs4UiBTk4VwLoAKgsusL2oEMWVljOTkzeXlziAJ5eQgyBwoCEVDB' +
+        'tQXtV+e1LqounFySB0RN6akKIAVAB1sAGUAuRByoAKjs2ISKY/3lx' +
+        '/orTkyqOjejflZZHtAoIAIygFygIFAKpGBCBQMjIwMDAyMTEyMYnJ' +
+        '1S05Od2p2dCmQwogIGGICwmZmZQLZMqGBlYUFTAABEyv8a');
+        color := 3485923;
+      end;
+
+    MM_SYMBOL_STALL_SILK:
+      with result do
+      begin
+        name := 'Silk Stall';
+        bmp := BitmapFromString(15, 5, 'z78DA333034004227432' +
+          '733276364D2C2C4C0D0D488181253AF81210262CA42484B67030B' +
+          '33476248DA996C696869664994C9C48706B299F84D36733630347' +
+          '62486849889CB6400B4306127');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_PLATESKIRT:
+      with result do
+      begin
+        name := 'Plateskirt Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA3330340042' +
+          '2743273327634CD2D9D8CCC2D9009974323235763282909686966' +
+          '696587419182220F126239B4F9EC9B8DC8929423B93315D4E2034' +
+          '709843BCC900457662CC');
+        color := -1;
+      end;
+
+    MM_SYMBOL_AGILITY: // 27 January 2015
+      with result do
+      begin
+        name := 'Agility';
+        bmp := BitmapFromString(14, 18, 'meJxjYAADRkYgwcTEtHLWxN0blu' +
+        'cdvuly5B0TCytUihEEGGCAhZ0jZdn2msVrsirKPVcfUpp/KaKxn4m' +
+        'NHaSWiQliDpBk5+SM6pnpvOqsy/Yb1ie/Ol3+bbT6WnNLU/y0lRDT' +
+        'GCEmMzFN7GjKWrU/vTgvJtJTZ/F5x/M/LPa81O/f6rV4f3JlPdhyR' +
+        'mYWltWzJ21Yuzxy7rqSdL/8aHurTbf01t9xzytW6NriNWXN6vnT18' +
+        '6bCjR25axJJzcsWtRe3Jjk0JxoE1VSYLXnheHco/EBlkURljVxNkv' +
+        'bi4AKVs6edHLjkmVdZW1J1p0pNjXRZo5Ljtkdfme29ZFqz9bkaPeW' +
+        'RKv2FHugAqCydXMnLWrN6ki1a0+2yQ23MVl/U6t7o/v8nXabbhu2L' +
+        'MqPcWhPsQUqACoD+n37wmlL2vOqIs1CstMd9r7SjMxPjXYLTEuyXH' +
+        'Y2MDluUWvujkXT+AQEWVjZmJiZ5/Q0JSzY6nL4g2Tt4ugIj7poi1w' +
+        '/A4tl54OrOtfN6GZhZWVhY+cWFIYHvnlpf0KAZWWEaX2MGZCMKiwG' +
+        'hiDQKFBAMrOwc3LBY2pWR930qsS6GIuGGIs5tUn9Hc2QAAdFEDMzF' +
+        'y8fJLKAoL22bPuc3rl1qUAEZDRXlUBjBxjXLKwcPLxwldNbKlf21O' +
+        '9eNBmIVvXUT2kohauE2A7hAtU3lhcu7aieWJE7uTIXyCjJSEAkD2Z' +
+        'mJiZmIBsSs0DGks6anIiArHD/xR3VkMQD9wXQWLjtQNHG0vwpdcVA' +
+        'VJgay4iqEjmJAnlAPK+pbEFLBZogEAAAW17b9g==');
+        color := 4379643;
+      end;
+
+    MM_SYMBOL_TRAINING_DUMMY: // 12 October 2014
+      with result do
+      begin
+        name := 'Training Dummy';
+        bmp := BitmapFromString(14, 15, 'meJxjYEAHF3atAyIMYQxlO1at7q' +
+        '8AIiADj7Lti6evmVA1IdsJiICMrYunY1U2+8zdrlmzq2Nt+jIdgQj' +
+        'IyJ88O3bfPTRlq2b1Ny9Y2nniblV3e2W0JRDFtLT77LkfO2PFspkT' +
+        '4MpObli8tKO4LNoma8rshguvUptavMrrXQ69ceudVxptA5QCKgAqO' +
+        '7Jm/pKusqYEm+ZEm7wQs6i+2RkH7nktOWRRPxHIbUm0aUm2W9pVCl' +
+        'S2f9mMBc2ZJblhOUXJ2UGmzgXlzksOx+y6FVxRC+QW5MeUZQcvas7' +
+        'YvxTku31Lp3f1toQu2ek+c63Whhv6lRNcO+aE77kbPH1F3Pz1PT1N' +
+        '+5YiAmHNlPboCXP9Trwznrc31scYiOznbA/e9yixfyZQCs37Ycv2e' +
+        'U5dHbz2REKCf1yMV9iKAz5TVsWs2I81SKe11ZS0tcVXFMYUZpa0tg' +
+        'K5uOJoWnPFxhldU2tSgQjImNFSiSdCF7ZX7Vo4CYiADDzKIKC3NAu' +
+        'IMMUBZnC56A==');
+        color := 6208727;
+      end;
+
+    MM_SYMBOL_SHOP_FOOD:
+      with result do
+      begin
+        name := 'Food Shop';
+        bmp := BitmapFromString(15, 5, 'z78DAA5D0610AC0200806' +
+          'D02B559ADA4F37DAFD8F3499C11C6D63B02F900A79882959B28AC' +
+          'A825E09908A0893A0B4C25441ED49A0DA2AB3DFFDDF7B467FE64D' +
+          'C88594CF13E56651A08C1DD66146F9A82E47532C0DDFE531F92C8' +
+          '77A9183F945BED9C66F396EC385D91F321AD29FE41DF6B66191');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_FISHING: // 31st October 2014
+      with result do
+      begin
+        name := 'Fishing Shop';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7b97Nbv5/dggf9urD9x9' +
+        'nNX0+s6yzKyYuLx0Tlaam91WWFCYndJfnfjq/9fHyNn4uPkpIJGJn' +
+        'DGCD2vBl9G5dP7mutCHDz/3xszcdDK8EqTZWULJSVLYAkBAX6R0xo' +
+        'K1dVMVoxry09KvTdgWXv9y/zc/aByBobOoGNBbEd7b3XLJ2WEhe7f' +
+        'F5HmLfX423z3uxd7OvkraRkpqNtn5ORraBoDFHp5xO2fe20isI0Hw' +
+        '8PV2uHZ9vmvdwx38fJC+iwmKjUfVsWgV1ooalpu2vz0rqyXAV5XVl' +
+        'ZI19n7xfb5z3fNsfD1lNb237OlJ7uprLosBBlZcvi/JJDW+dpaRnL' +
+        'y4M0ejn4PNs6+9GG6e42Hm4uwZtXzTYxspaVNbSx9tm0ak5sRLiUl' +
+        'A7Y2Waedt4P10+7v2aym7VHeEjcqkVTtbUsVZQt66tr5kztlJXRVl' +
+        'AwhbjZ084LqOzOin43K3dTE9dje1f1dbQ21jUf37cmwCdARsYIokx' +
+        'BwRLovDvL+28s6XK1dFVQtIwIidmyeua+rQtS4uPlZPUUwcoUFUEI' +
+        '6LzrizuvLewAqpSVNZGVNZWTM5KWNpCS0gOy5eUt5eTN5eTMgFJA5' +
+        '11d0A5E8yvzJxXlAFFDaoqCgoWcHAgBGUAuSLw4d2FtycU5zccnVh' +
+        '3rLz8+qfrU5Oqz02qnF2YoKJgD0ezKwrMzG05NqQZKAdUc7illhAI' +
+        'mBjB1dkpNZ0ZiT07a2SnVEAkGBpAMExMzAyoACgKtACIGDAAAwsAK' +
+        'Ig==');
+        color := 2236984;
+      end;
+
+    MM_SYMBOL_JEWELERY:
+      with result do
+      begin
+        name := 'Jewelery';
+        bmp := BitmapFromString(15, 5, 'z78DA9D904B0AC0300844A' +
+          'F646843E2D24FBCFF911A6217820DB4DD0C32EA43070A28B08088' +
+          '6054AB664DB46B07E64276220109A1D7EEFB4CDE85C5840D79E0E' +
+          '05223D3D5BBEEFB4CF4DF933333AA5FFE957CFFDB95DB5356CBFF' +
+          '479E471FB395F2DCE59FC917FB9B6AAB');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_CRAFTING: // 24 January 2015
+      with result do
+      begin
+        name := 'Crafting';
+        bmp := BitmapFromString(14, 17, 'meJz7eX7bz3Nbv53ZjAcBFfw8v+' +
+        '3bibWdhTk5MbF4EFABUNnnIyv9XHxMTV2UlcwUFY2ByNk5qL2jv7N' +
+        'zQl5+pZaWFVAEqODrsdXvDiyLD43ev/9gZWWjqqo5UFxP13bSxGlX' +
+        'Ll++dOlyVVWzurqFn4sv0MCXuxYEuHgDRdav35CeXghUKS9vqG/g2' +
+        'N/Tf+TAviNHj+XllgW4+b87sPT5zvluNi6KikY5OQUL5s0PD4mXlz' +
+        'dWsw63iK1rb2rasmnThg0bSrNzn+6c/2L7XA87TykpHSUl/azExMm' +
+        '9PXaeEfpZk5QDqgzNPetq67u7ewPc/e5vnPZi62xvBy9ZWWMZGUMx' +
+        'cfXQkKi6xlaL0ExpZStpBTM9XWtlZRMXS6eHG6Y93jgNaCbQeQoKJ' +
+        'lpWIXppPcFJ+TFl7drWQWDtBtLS+m7WLg/XTn6wZpK7jYe8vIm+U7' +
+        'xd/SbtvLmymlZGyW1W1Su1LIIVFEwVFIyBCoDKbi/rcbN2U7eNtWz' +
+        'Yo1OwSkLRTFJCS0LOSDW4UTNhkqqBt5ycsbu1+53lvdcXd7lauSp5' +
+        'l6unzpc28JOS0gVaCrRRVExV1rFA1jpVVt4MaNTNJV1X57U4m9tLA' +
+        'd2j6yslawxUJidrKitrAlQsLm0opWwNFHGzcru2oO3K3Oa5Fbmd2a' +
+        'mtGcnViQmKiubychZAxUBGWVx0e3ZKf0HWgurCq/Nbj02oONJXdri' +
+        'v7Eh/xZnp9bPK8oBqFBXMgYwTk6rB4uVABFTGwsbBxMLCzMLGxMzM' +
+        'yMi4pDylOye1JyftzJQadlYWoAgLKzszKzsLCxsDHDAyggnGY0AT+' +
+        'suZwRoZkAAAsi0M1g==');
+        color := 1776431;
+      end;
+
+    MM_SYMBOL_PORTAL:
+      with result do
+      begin
+        name := 'Portal';
+        bmp := BitmapFromString(15, 5, 'z78DAA5D04B0AC0300805' +
+          'C02B69D2D6B8D47CEE7FA4045CD442ED22457848D0410208AB549' +
+          '4942D2F4858DAA9B05A6A4895251DB93FD2DE6DC6E6BD0078D7B7' +
+          'A98374A0CFC86761E2173977C052F764DB8DE43F375B46F2DE3F7' +
+          'BD3CB13F26764CE');
+        color := -1;
+      end;
+
+    MM_SYMBOL_MAKEOVER_MAGE:
+      with result do
+      begin
+        name := 'Makeover Mage';
+        bmp := BitmapFromString(15, 5, 'z78DA333034703170' +
+          '7236707676B68490066011571367734B174CD2D2D8CCD5C418993' +
+          '4C06182015E9391D5608A209BEC68E0E8EC4882C9C4BB99129391' +
+          'DD499EC9F8CDC76526A6C9003E5F6688');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_MACE:
+      with result do
+      begin
+        name := 'Mace Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA9DD14B0A80300C04' +
+          'D02B4D4CF3E93226DEFF4A82155404296EB21A1E330484C29AC8C' +
+          'CFE7DAD7BB89A38D9A6696EA2A4A511888C4712878909D9521BB3' +
+          'A6086368B248C969FE932F7381546BE477ED6DCEC80F135C64DFD' +
+          'A8C7CDFFEEE39F39161EE1ADD6893');
+        color := -1;
+      end;
+
+    MM_SYMBOL_HAIR_DRESSER:
+      with result do
+      begin
+        name := 'Hair Dresser';
+        bmp := BitmapFromString(15, 5, 'z78DA33303470317072' +
+          '36707676B68490066011030C71E2D5E0977534707476C4A206998' +
+          'DAC8654B7E1B2059984C84248F27C8D6C3EB269C4BB19531CD91C' +
+          '4CF7E37233005E916796');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_MINING:
+      with result do
+      begin
+        name := 'Mining Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA33B03430313074' +
+          'B670367672C5241D2D1C8D2DA1A40158258474737473333285909' +
+          '8BA9055E232199944360DBFF9C49B8C6926B22F20E21011FC263B' +
+          '5998BAC0447099499EC9C498896C022E9301172B6823');
+        color := -1;
+      end;
+
+    MM_SYMBOL_STALL_SILVER:
+      with result do
+      begin
+        name := 'Silver Stall';
+        bmp := BitmapFromString(15, 5, 'z78DA958E410AC0400' +
+          '803BF14D1823D6E6DF3FF2715EA4510A17B09C198211008347031' +
+          'A4AB4169E2E6EA071F06EFF4F5DE5BF89818C8D9ADB4AE13FF0FB' +
+          '976FBF2F4F9B370726D90FBB64977C913BFA6D3E61755066363');
+        color := -1;
+      end;
+
+    MM_SYMBOL_STALL_SPICE:
+      with result do
+      begin
+        name := 'Spice Stall';
+        bmp := BitmapFromString(15, 5, 'z78DA9DD0C10E80200C' +
+          '03D05FEA06883B22D2FFFF2413F140B240D44BD3C3FA0E8340102' +
+          'A0E5619D3984CAC714B50B224D1A72B9BEEBDF71BBFC56DC2C96F' +
+          'CCB5EFE5A9F9D1F77244609C66B67CE6B6CE0263997EE39FDFCD5' +
+          '1BE002BE06493');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_FARMING:
+      with result do
+      begin
+        name := 'Farming Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA95CE410E80200' +
+          'C44D12B4D5B405C160CF73F92C461D1C498E0E6D374F1280402EB' +
+          '68A30B6B559340150D25F5F95ED55392D556735365BBA96B661DE' +
+          '7F025E031F192A9D1E75CAA1D52A2CFD2E42FFB7234BFE478FF8E' +
+          '9CE7128332E72FEDAF1C2FDF91A319E51BD93562F0');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SLAYER_MASTER:
+      with result do
+      begin
+        name := 'Slayer Master';
+        bmp := BitmapFromString(15, 5, 'z78DAA5D04B0AC030' +
+          '0804D02B8D89A5CD320D9DFB1FA9BF8D622D8582B810E6210381A' +
+          '00EAC1CA2A85461E3F34C1CB366FBCE7634F6533C4C04D9FAEE62' +
+          '84ECF22EDB3F9D53B89525CADF7F4E1BB864B77FB411B359C351D' +
+          'E019F8C655C');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SLAYER_CONTRACT:
+      with result do
+      begin
+        name := 'Slayer Contract';
+        bmp := BitmapFromString(8, 8, 'meJw7cOCAna0dEFlZfUBGWAUh4kBS' +
+        'TnUKEMEFgWxkxRApCAkRZ2RgACK4AiAbWRwiBWGgWQrXheweZF0AZ' +
+        'Mk/Hw==');
+        color := -1;
+      end;
+
+    MM_SYMBOL_HERBALIST:
+      with result do
+      begin
+        name := 'Herbalist';
+        bmp := BitmapFromString(15, 5, 'z78DA7D8E5D0AC0300883' +
+          'AFA4FDD33E5AC6EE7FA415C258C0D10A22267E8DA8EC5A253C9CB' +
+          'B5EF5166D7D4C89DE6DE9C45C6DF8BB1733FBBB15FD0A1B10B001' +
+          '99F9CCC42C5AB77B16DFEF4C86BF370B355C653272428513EA990' +
+          'C3FF3393954EEFC2327CFE4CCCFC933136A263F5CC35F29');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_CANDLE:
+      with result do
+      begin
+        name := 'Candle Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA33303400422723' +
+          '470B470B4CD2CDD0C2D5C01042BA9ABB9A9A3A218BE0D26560888' +
+          '0B8D4209B8F6CB2A591051040488A4C367035753571317136B134' +
+          '8390B8CC1CEA26030022F6653F');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SAWMILL: // 9 October 2014
+      with result do
+      begin
+        name := 'Sawmill';
+        bmp := BitmapFromString(14, 20, 'meJxjYEAANja2OV11746tA6L5vQ' +
+        '1MTExAQRYOLogsIyMjhAEUv7pp3r1t82pTw4EIyABygbJMzCxMzMw' +
+        's7FxANicn57WtC9/uX7qstUhBWoKNlYWXmwvIWNpW/PbAsutbF8FN' +
+        'e3Fw1Yn5nYn+LnzcXEyMjL6eboG+XkAGFwd7jJcDUOr1odXMzEwfD' +
+        'y7rL07WUpYzMzZ0c7IXFRZau3BWfXmRoZ5OoLeHubGBjqpCf1HS+w' +
+        'NL3u5eZGuozcPN5e/ltn7x7P62htqSvMLMlEXT+9YsmOnmaMvHywN' +
+        'U8Gb3gte75tsYagFVGurqzJvYqaWhJsDHC0R62po9LXXiYiJAKaDK' +
+        'V7vmv9gx18nc0NnOOjslvjAjWURIcFpv2/TeNiCjuihn1oQOMyMDO' +
+        'yOdF9vnPN0y08nMIDrYf9msSaW56RLiYrMntM+d1Alk5KTEd9SVJ0' +
+        'aGulgYAZU9WjfF0VRfXEzU0tS4t6laU01VX1sLiICMqV3N1uam0pI' +
+        'SQKOAyh6unQxUKSkuYW5itHTmxM3L56TGR6XGRW1YNGPT0tl+Hi6S' +
+        'EhJABUBl91b2V9d2eudPcSla6Fa61K1sGRgtB6HSpUBBoBRQAVAZM' +
+        'ORPz22b3VofnlqpH96gH9sLQnF9erE9QC5QECgFVMDKwgyJ8ePTG4' +
+        '7NbC/KypZzSpN3zQYiOcc0IBcoeHxaA3IKYWRimlOeemxKjbqqsoq' +
+        'yIhABGUDuwupMoDmgdMLKBlUNVr+2IbclNVxVRQmIgIwdXWVAJQzI' +
+        'AGIsI2N1cuSJydWOZoZABGSk+DpDpBkY0JSDwMlJFS1p4U0pYScnV' +
+        'jDC7EJyJ4LbkBB8sLcciKqj/ZCVwa1G1ripPhOI0JUxMAAAaOvwvA==');
+        color := 11510683;
+      end;
+
+    MM_SYMBOL_SHOP_KEBAB:
+      with result do
+      begin
+        name := 'Kebab Shop';
+        bmp := BitmapFromString(15, 5, 'beNpj4OBg4Dh37BgQZTtJRDFwZM8' +
+          'xhKD/mpo9DAwgEScJiAKgSohioIjEFJBKIAlEQJUQxcjqkRUDVULE' +
+          'gSQQzUl2ArKB5N7qKCBj6dKlyIoh4lhJNMWY6iEIZCNYJUgxALQIU' +
+          '2Q=');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHORTCUT:
+      with result do
+      begin
+        name := 'Agility Shortcut';
+        bmp := BitmapFromString(15, 5, 'z78DA8D90410AC0300804' +
+          'BFA421A1E95137EDFF9F54E8F62088259741161D64C5B4E98573E' +
+          '9821B1A206E3EE49F5DAC1F835724F36F7E9D12CCD370DBE40EE7' +
+          '9854FE9864330DF993C8ECC9CC66F65039F7FD551B3BDCFFF9018' +
+          '756682E');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_HUNTER:
+      with result do
+      begin
+        name := 'Hunter Shop';
+        bmp := BitmapFromString(15, 5, 'z78DA95D0510AC3300' +
+          '806E02BC558CDEFA309F6FE47DAC08E3942A143F041934FB1517B' +
+          '87C78447CD76BA591CCA445015EE5DD641C459F9D4F554C997F56' +
+          'FA36FEC3204819E663A77F25CAE633C972F01BC48AAB9FBB9C373' +
+          '79DFB6E69C98DDE1E0813FAE1106FCF897564C992A6277F20B925' +
+          '96443');
+        color := -1;
+      end;
+
+    MM_SYMBOL_HUNTING: // 13 October 2014
+      with result do
+      begin
+        name := 'Hunting';
+        bmp := BitmapFromString(14, 19, 'meJxjYEABddWFF3avA6K6skImJi' +
+        'YGHICFleXCjlVr+suB6MKOlSwsLFiVAU04s3X56v6qnmw3IAIygFw' +
+        'WFmZMZUfXL1zRXdKc4tKaFwREQAaQe2zDQg4ONhRl6+Yv7yxsTnZs' +
+        'mjyrsqO/qmtiVfdUIBcoCJTi5GAHKmNkZDi9ccnyrpKGeNu8MJu6N' +
+        'WfLeuaWT1hcNXcHkAsUBEqd3rSEg4P9yFqgaWVNCVbVjXV1a84kBD' +
+        'nlxXrkx3slhbi0bblSVVMJlAIqOLp2wf6l0xa1ZLUm2VQUpVdMWZ2' +
+        'cFN08czEQpafFV85YX5YTD5QCKti/bDoHO/v+pdMXt+XWxFnnxPtX' +
+        'LNjVe/JLz/FPlXO2Z8f718VZL2nPPbh8Bis4xLg4OYCK5zWkFSb5d' +
+        'Rx43br9YfPm2207nwC5QEGgFFAB3PvAoNg+v39yWUxBhE1WoFlWgE' +
+        'lBuDWQCxQEWooSnszMlWUpW2f1zK5NqosxByIgY+vsnuaSJGYW9Dh' +
+        'lYmVuL8ncPrt3Tl0KEAEZvZWZLKzocQQBrKwsi9urdy+aDERABhsr' +
+        'UrwDwx0J1GUnTqzI7SvNBCIgo6UoCaSdDYuxwGhd2lkd6+0CREAGI' +
+        '6o5aKC9ILWrJKuzOAvIQBbH1ASM38XtVYtaK/GYBgfF8WFABDaHkR' +
+        'Ep2QMAQMzYtg==');
+        color := 8150587;
+      end; 
+
+    MM_SYMBOL_SAND:
+      with result do
+      begin
+        name := 'Sand Source';
+        bmp := BitmapFromString(15, 5, 'z78DA8DCF4B0AC0300' +
+          '804D02B8DA9F9B84CA4BDFF91526A16820D64330CA20F0481208A' +
+          '51B4FA1C4998CBD07EE5D5EFA654B34F9BC75B7C2682BC336D72E' +
+          '247B921239137577766ECB629E9BD959D5CC14CCF8F1FBE88A665' +
+          '8794BE952DFDFE49DA95972794856206');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_PET:
+      with result do
+      begin
+        name := 'Pet Shop';
+        bmp := BitmapFromString(15, 5, 'beNpj42Nm4zt87GxnbWFhUkh' +
+          'skCsQ7dm7CYIgXKB4dUkYUA1QJVwxULyypllFSQMoBUEQLlAcyF68' +
+          'bA1ccV1hBlAQKAXkQoxdOL0LyMalGCgLUQYRhOsCOgOI0BQfWt0JQ' +
+          'TomBhAEVAnkAo0FGg5SDADYtlua');
+        color := -1;
+      end;
+
+    MM_SYMBOL_OBELISK:
+      with result do
+      begin
+        name := 'Summoning Obelisk';
+        bmp := BitmapFromString(15, 5, 'beNpj42Nm4zt87CwE2SVP1' +
+          'XaoKeidC0SeUTWfHj4AiixetgYoCCSBKuGKgSKVNc1AZXMO3AOpWf' +
+          '8EqBiiEaIFrhioEigCRJPnrAAqBqJjl98BEVAlxFigGmSTIVqAtgM' +
+          'VAI0FqgeSEBMwFQNVAo0FigPVgxjrnwB1Obj4IBQDAImMdLM=');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SHOP_SUMMONING:
+      with result do
+      begin
+        name := 'Summoning Shop';
+        bmp := BitmapFromString(15, 5, 'meJyzicq0QUKMDAzIyAZVFk3ZAVS' +
+          'AVQtQJGrCfCA6gA0gqweyFyxY8OjFi5MPvwLVb9uyEVM9muLJ377C' +
+          '1WNqgRgOABDhZzk=');
+        color := -1;
+      end;
+
+    MM_SYMBOL_SPOT_REST: // 10 September 2014
+      with result do
+      begin
+        name := 'Resting Spot';
+        bmp := BitmapFromString(14, 20, 'meJxjYEAH74+te3t0DYYwCri+ZcG9rfNqUsLrUiMe7Zx/ZcssTDU3ty16vW/pstZiBWkJNlZWIAIyVrSXvj+44taWOXBlrw6sOj6/K9rLnouTnREJcHGwx3k7nlrc83r/MqCyD4dX9hYkaCrJsbOzAUF0dHQUDERERCgrK2spy00qS3u7b8nrvYutDLS4ubkg6ODBg6thYMuWLR4e7lxcnHbGuq/2LHq+a6GVviZc5YoVKzhgwMTExMXFBajSxlj32c4FT7bMttTTEOTnAyI+Xp5ly5ZxcnLw8HDz8vJYWlp6e3sBtdsYaT/ePAuIrA20hIWEIGjBggU83FyCAgJAto21tZeXJy8Pt72J3qNNMx+sn2ZnpAMUNzc3r6+vnzx5MtA0MVHRpKSk3t5eoO1AXU7mhvfXTb27ZjJQpayMdGZmxowZM0pLS/l4eQ0NDBYtWtTV1WVmZiokKOhganBn9aS7ayenBbppqihbW1rGREdraWkK8PMDNcbGxvr6+kpKSijISmeEet9c3reiteTc7Nbp5eneduYykhJAZ0iIi8tIS0sBFYmLOZoZTipJPTOnFR5NZ2Y0HJlSmxfmLS8rq6Qgr6yoAGQURAccmFRzdGotZuwfnVytrqKsoqQIREDGqRmNuNLSxrbi+oQgVWUlIGrLjlvdmIcn4R3pq7A3NXC0MD6J20AIOD25BmhsS0b00f4K/CqB4FBf+cHeMoLKgGBXR+GG+kxMcQBnPMK+');
+        color := 920844;
+      end;
+
+    MM_SYMBOL_RUNECRAFTING: // 21 September 2014
+      with result do
+      begin
+        name := 'Runecrafting';
+        bmp := BitmapFromString(16, 19, 'meJxjYECAxoYurIgBGygpbfMPiL' +
+        'K2cTG3sLOxdQYiIMPKyt7fL7SyvBFNcXF5b1hii5F9cnLH0uoZa2Z' +
+        'tPTZ396k5u09O23wwKDE7MSG9rLQOWX1O1XSBmluSTa+Uy845FKzO' +
+        '7VhdMnlF3ZzVjfPX5zRO8PIJrqpAWFFe0RAWlafhV2c083Xa5X8KU' +
+        'z9oRa2LrlyY0za7oGdBYd9Cz4ik2Njk0tJaiPqaigYNLWP/mGLHhI' +
+        'Wq2ZeLrv8TK7jjkrjIN7UjILMzp2NOat0EbX3j8pIaoOLamlZnZ3c' +
+        'lNc3kml6X2Ba+uNsNL//brvkhkPBGIPmxuke1d2pDYt1kY3tvoLLa' +
+        '6pbamjZ9A2N5ZTXflHLfzDZ1p1qZ3jf5h34WHP7V+uQ/j89eI88yn' +
+        '4xmU5cAXV3D2srG7LzShLgUKRk5Q3tvz5Ram5AahYBpSv6rxSMvT3' +
+        'nwR3Xaa+mAxaY+hXJq+mEhUdk5RSAnVTRYWlirGdo4RBTYhebZBOe' +
+        '6hpdrhi1T6PhWceu/xdK3Epb1ugZWRXml0MDMLcpIyZZX1tCx8TJy' +
+        'jwQiY/doTetYKcVo4eQXrpu/y/j0h4ZlpmXkw4O0orjK0cFZTlFNV' +
+        'sNETs9e3tBZXs9F3tBHwqmLz32uVvj0tIxqtCjOTs/VUNcUEhbhF5' +
+        'IQEJEWEJYQEJMVEVNWUbWMjC0PCI9DU19RUl1WVJmWlKGtYyAhKQ1' +
+        'EQEZkeFxeVkFJYTnWJAfRlZuZr6mhBURZqdkl+WW4VMJBS22zt4cP' +
+        'EAEZBBUDQXlJZVlBGQgVVxKjHgg6GtqAiEjFQJCZmQtEWKUAGX3nxA==');
+        color := 7324409;
+      end;
+
+    MM_SYMBOL_LODESTONE: // 9 October 2014
+      with result do
+      begin
+        name := 'Lodestone';
+        bmp := BitmapFromString(14, 18, 'meJxlkt9PUnEYxuEAAvUPtHXRP9' +
+        'BFmzLYygXonINaQL+oMFIphA4lHCDOOaIIiSIIBAKOEbAgqpGuNjQ' +
+        'BR164cK6LbkzXuu/f6AHKtfXuuXie9/mc7815OZzOEHw+l8sVCfua' +
+        'hZVGLgw1C5FzZ89gyflnEIV9gno2uOqZ2oiyX0sxCAaxkQ0SBHFC8' +
+        'ni81logRVt+NUo/q/lWZAWCQcQS1WmxuPf4duZ50m0+fJ157/G9c/' +
+        'm2AkEIBvGwkkEFoEfGqMnjauqNk21FQuusL22yQzCIWB5X03GnCVg' +
+        't6ct7bQeZSNHmKjvc5OCNeQsDwZSmmTzpQgVgMzn3McrsxL0Vh+vV' +
+        'U2pea/RMOGqfdiEYRCwrDmc94d2MMVsxph6mcxYyO2V1j95yjE+/S' +
+        'L6EYBCzZmvO+nh7+VktSu+mfSlq4sMsFdKP+XV3rp9XkvdJCMavMY' +
+        'Ruj6EC8Dk19624aFQP7UVpRqUrkib3iNZwQQnBILJqHSoAwI7KYc2' +
+        'w3Km/UrY/co9cW9brI13BIFYoMyoAwH6Uw/c0qosyKXVTteGZSo7f' +
+        'nb2qhWAQsUQFANhRcdGgUSvkColEopD2Lxi1VfohBIPYWcoVAIB9L' +
+        'wQXyAfUpOGJUT86PCSTygb6ByAYRCxRAQDWTjDtxMx+2new5s+xNq' +
+        'VCeSJELFG1V2eAdW6JIPBbxSLRfpJ9G3BeHrwEwXyJewQC/p9r6/5' +
+        '3bveu4Pl8HtosbYH2ou5TIiHnv+HyeN3vuCKRsLlk31myd87y71O9' +
+        '+Q0X/yFj');
+        color := 7751766;
+      end;
+
+    MM_SYMBOL_DIVINATION:
+      with result do
+      begin
+        name := 'Divination';
+        bmp := BitmapFromString(16, 19, 'meJxjYECArqrWi4t3X1i8q7O6va' +
+        'K8oay0vrO8YVZtGwMOUBeT8Xzapo+LDxcHJwa4ePWm5zVGJc5Mz8e' +
+        'qWF1dS1VBudzWs9EvxkrXIMzRTU1JRU5WTklBeVFWAZpiR0c3c1NL' +
+        'dSUVbUXlWLeALfWTNzZM7k0vjLJ39jS1mJeRz8HGDleckZGXFpuU4' +
+        'OLub2m7sqLz+8YL/zZe+rfl8ved16fl1/tb2vRGJywsqpxZUgVRP6' +
+        'miYWFmvrORaaSd86t5e/71r/9XNQOEJmx4Nmt7pruvq5Gpibbu3b5' +
+        'pQMXlmflPJszQUtXQVlMvcvV7Wjnpd0LVP484IAIyPjQvqPSProxM' +
+        'nV/WcbtrUk5CWl953dW2Pms9I1dj83BTm8NRmbd8oh86BQERkHE4L' +
+        'DXf0eti96Jvq0/MzajMzylKTk6fW1Y7MTZ5emKap7FZprHVDkePgz' +
+        'YuQARk5BqY2Wlo19i5zfWLSvMOjk9KBzopP7swNSTySNu0LJ8QFz0' +
+        'DZyWVDE0dIDKXkVOUlVdWVJIVlzRQ10qMS4X419c/eHfr7N/br+1q' +
+        'nG6sqaOnpmGlo6eprCIjK6eioqqqpq6jo5udnpeaiYiF+uC4HYkFM' +
+        '4Lj8zz9sr39LA2MQOo0NIFIS0s7IjSqoaoROb70DI2DbRzstPXNdf' +
+        'QgKjU1tYEkkG1tZVtRXB0en4wWxQnxKcV5peXFVS5OrhD1Lk5uDTX' +
+        'NTbWtlWU1WJOQmbl1ZUl1cV4J0MH62nqleSV1FXVRsQm40icENNU0' +
+        'e3t4A1FLbRN+lRBQXlxZXlAKQsWVxKgHgobq+o4GnNkEEwQGhmRm5' +
+        'WGVAgABkeXb');
+        color := 12663876;
+      end;
+    MM_SYMBOL_SEASONAL_EVENT:
+      with result do
+      begin
+        name := 'Seasonal Event';
+        bmp := BitmapFromString(14, 17, 'meJxjYECAbUsmvju58dPpzZ9ObX' +
+        'x9bN2W+X0MGKC1Nu/N0bWnl0/rLC5Ji0xNj0rtKa86t2rOm6NrWqq' +
+        'z4cq6m0s+HVs9q6FKR8dTVNqBX9wWiMRkHPUMAha1twClumpzICpf' +
+        'H1qxorNBXNaRX9pNQM5L0rVLwn2KgJw3kCsh57JpUtfzvYuBymb2V' +
+        'F1YMVVV00NEN1U2fK1szG7lyk9S+Z8lI3dLBq0V1EzR0Pa7uX7O1N' +
+        'aiO9vntuQX8Mv5KKcfc5z5RTz5gXDKe8HEdyIJD6wnfhYLOcQn49N' +
+        'TWnVjw4zH2+f5u0eLmFVaT3hfdPlP3Nr3MhnPgQjIKLz0x6DuOZ9W' +
+        'UYhv2uNtcx5vnmVvGy1k1SOX8dS597Vx8VWHzldABGQAudJxd3n12' +
+        '5wc4x9tmnl33dRw31R+jWw+34vi4TeEfI7Lx98CIiBDIvw6r+sJfr' +
+        'XMqICMW6snnVrU1VdcLiQfwms0zbjgcvC8Z6kbPwARkGFScInPYJK' +
+        'QXMiUqtojc1pq8uMuL+g0NEkQko8Q0iwL6NxfdvEHEAEZQC5QECh1' +
+        'ffnk0owoYEAdm9mwtbtRQy9BVCFMWC6UTzoTiIAMUYVwTf3EndP6D' +
+        'k2tg0fTxXmtk0urtA2SxJRi4EjHKGVadeOZmY3I8Z4c5398cl1fQb' +
+        'mseoK4CggBGZMqGo5NbUgL9UVLJHmxwaen1M4oq5TVSAaiWbWNJ6f' +
+        'VZ0f4YyYnIGhMjTg7paY7t6K3uPbM5OrKuCCsyqCK0yKOTag40ldW' +
+        'kxiCJgUA8lT8BQ==');
+        color := 1139182;
+      end;
+    else
+      print('Invalid symbol constant: ' + toStr(sym), TDebug.ERROR);
+  end;
+end;
+
+(*
+findSymbols
+-----------
+
+.. code-block:: pascal
+
+    function TRSMinimap.FindSymbols(const Symbols: TIntegerArray; const SearchArea: TBox; out FSymbols: TFoundSymbols; FindOne: Boolean = False): Boolean; overload;
+
+Searches for multiple mumumap symbols and returns true if at least one is found.
+
+    * **Symbols** An array of MM symbols
+    * **SearchArea** The TBox ti search
+    * **FSymbols** All symbol info (pos, accuracy, point) is stored in this
+    * **FindOne** If true, will only find 1 of each symbol *(default = false)*
+
+.. note::
+
+    - by Olly
+    - Last Updated: 10 September 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    procedure Test_Symbols();
+    var
+      Symbols: TFoundSymbols;
+      i: Integer;
+    begin
+      Minimap.FindSymbols([MM_SYMBOL_BANK, MM_SYMBOL_DUNGEON, MM_SYMBOL_FISHING], Minimap.getBounds(), Symbols, False);
+
+      for i := 0 to High(Symbols) do
+      begin
+        WriteLn('Found symbol: ' + toStr(Symbols[i].ID));
+        smartImage.drawCircle(Symbols[i].Pos, 7, False, clLime);
+        smartImage.drawCross(Symbols[i].Pos, 5, clLime);
+        Writeln(Symbols[i].Acc);
+      end;
+    end;
+*)
+function TRSMinimap.findSymbols(const Symbols: TIntegerArray; const SearchArea: TBox; out FSymbols: TFoundSymbols; FindOne: Boolean = False): Boolean; overload; //does this need to be overloaded?
+var
+  Bitmap, i, Targ, OldTarg, Wid, Hei, bWid, bHei: Integer;
+  Sym: _TRSSymbol;
+  SearchBox, SymBox: TBox;
+  P: TPoint;
+  Acc: Extended;
+label
+  Loop;
+begin
+  Bitmap := BitmapFromClient(SearchArea);
+  OldTarg := GetImageTarget();
+  Targ := SetTargetBitmap(Bitmap);
+  SearchBox := IntToBox(0, 0, SearchArea.X2 - SearchArea.X1, SearchArea.Y2 - SearchArea.Y1);
+  GetBitmapSize(Bitmap, bWid, bHei);
+
+  for i := 0 to High(Symbols) do
+  begin
+    Sym := Self._getSymbol(Symbols[i]);
+
+    if (Sym.Color = -1) then
+    begin
+      Printf('%s symbol needs to be updated! Please post a bug report in the SRL bugs section.', [Sym.name], TDebug.ERROR);
+      Result := false;
+    end;
+
+    GetBitmapSize(Sym.Bmp, Wid, Hei);
+
+    Loop:
+    if (FindDeformedBitmapToleranceIn(Sym.Bmp, P.X, P.Y, SearchBox, 40, 0, True, Acc)) then
+      if (Acc > Self.symbolAccuracy) then
+      begin
+        SymBox := IntToBox(P.X, P.Y, Min(P.X + Wid, bWid - 1), Min(P.Y + Hei, bHei - 1));
+
+        if (CountColorTolerance(Sym.Color, SymBox, 30, ColorSetting(1)) > 1) then
+        begin
+          RectangleBitmap(Bitmap, IntToBox(SymBox.X1, SymBox.Y1, Min(SymBox.X1 + 10, bWid - 1), Min(SymBox.Y1 + 12, bHei - 1)), 1);
+          Inc(P.X, SearchArea.X1 + (Wid div 2));
+          Inc(P.Y, SearchArea.Y1 + (Hei div 2));
+          Insert([Symbols[i], P, Acc], FSymbols);
+          if (not FindOne) then
+            goto Loop;
+        end;
+      end;
+    FreeBitmap(Sym.Bmp);
+  end;
+
+  SetImageTarget(OldTarg);
+  FreeTarget(Targ);
+  FreeBitmap(Bitmap);
+
+  Result := (Length(FSymbols) > 0);
+end;
+
+(*
+findSymbols (overload 1)
+------------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.findSymbols(var tpa: TPointArray; symbol: integer; searchBox: TBox): boolean; overload;
+
+Returns true if one or more of **symbol** is found within **searchBox** The
+midpoints of all symbols that are found are passed to **tpa** .
+
+.. note::
+
+    - by lordsaturn
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      tpa: TPointArray;
+    begin
+      symbols := minimap.findSymbols(tpa, MM_SYMBOL_FISHING, myCustomBox);
+      symbols.sortFromPoint(minimap.getCenterPoint());
+      mouse(tpa[high(tpa)], MOUSE_LEFT);  // Click farthest
+
+*)
+function TRSMinimap.findSymbols(var tpa: TPointArray; symbol: integer; searchBox: TBox): boolean; overload;
+var
+  Symbols: TFoundSymbols;
+  i: Integer;
+begin
+  Result := Self.FindSymbols([Symbol], SearchBox, Symbols);
+  if (Result) then
+  begin
+    for i := 0 to High(Symbols) do
+      Insert(Symbols[i].Pos, tpa);
+
+    Printf('TRSMinimap.findSymbols(): Found %d symbols (ID: %d)', [Length(Symbols), Symbol], TDebug.SUB);
+  end;
+end;
+
+(*
+findSymbols (overload 2)
+------------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.findSymbols(var tpa: TPointArray; symbols: TIntegerArray; searchBox: TBox): boolean; overload;
+
+Same as overload 1, except it can take multiple symbols in **symbols**
+.. note::
+
+    - by Nava2 & NCDS
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    symbols := minimap.findSymbols(tpa, [MM_SYMBOL_BANK, MM_SYMBOL_FISHING], minimap.getBounds());
+*)
+function TRSMinimap.findSymbols(var tpa: TPointArray; symbols: TIntegerArray; searchBox: TBox): boolean; overload;
+var
+  fSymbols: TFoundSymbols;
+  i: Integer;
+begin
+  Result := Self.FindSymbols(Symbols, SearchBox, fSymbols);
+  if (Result) then
+  begin
+    for i := 0 to High(fSymbols) do
+      Insert(fSymbols[i].Pos, tpa);
+
+    Printf('TRSMinimap.findSymbols(): Found %d symbols', [Length(fSymbols)], TDebug.SUB);
+  end;
+end;
+
+(*
+findSymbol
+----------
+
+.. code-block:: pascal
+
+    function TRSMinimap.findSymbol(var p: TPoint; symbol: integer; searchBox: TBox): boolean;
+
+Returns true if the **symbol** is found within **searchBox** If the symbol is
+found, its midpoint is passed to **p** .
+
+.. note::
+
+    - by Stupid3ooo
+    - Last Updated: 23 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      p: TPoint;
+    begin
+      if minimap.findSymbol(p, MM_SYMBOL_BANK, minimap.getBounds()) then
+      begin
+        writeln('Found bank symbol');
+        mouse(p, MOUSE_LEFT);
+        minimap.waitFlag(10);
+      end;
+    end;
+*)
+function TRSMinimap.findSymbol(var p: TPoint; symbol: integer; searchBox: TBox): boolean;
+var
+  Symbols: TFoundSymbols;
+begin
+  Result := Self.FindSymbols([Symbol], SearchBox, Symbols, True);
+  if (Result) then
+  begin
+    Printf('TRSMinimap.findSymbol(): Found symbol %d at accuracy %f', [Symbol, Symbols[0].Acc], TDebug.SUB);
+    p := Symbols[0].Pos;
+  end else
+    p := Point(-1, -1);
+end;
+
+(*
+isResting
+---------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isResting(): boolean;
+
+Returns true if the player is resting.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.isResting() then
+      writeln('We are resting!');
+*)
+function TRSMinimap.isResting(): boolean;
+var
+  tpa: TPointArray;
+begin                        // blue color
+  if findColorsTolerance(tpa, 13345801, self.button[MM_BUTTON_RUN].bounds, 50) then
+    result := inRange(length(tpa), 5, 25);
+end;
+
+(*
+enableRest
+----------
+
+.. code-block:: pascal
+
+    function TRSMinimap.enableRest(): Boolean;
+
+Returns true if it successfully right clicks the run button and enables rest.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 07 December 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.enableRest() then
+      writeln('We are now resting');
+*)
+function TRSMinimap.enableRest(): Boolean;
+var
+  p: TPoint;
+begin
+  p := self.button[MM_BUTTON_RUN].center;
+
+  if (not self.isResting()) then
+  begin
+    mouseCircle(p.x, p.y, self.button[MM_BUTTON_RUN].radius, MOUSE_RIGHT);
+    result := chooseOption.select(['est']);
+  end else
+    result := true;
+
+  print('minimap.enableRest(): result = ' + boolToStr(result), TDebug.SUB);
+end;
+
+(*
+getRunEnergy
+------------
+.. code-block:: pascal
+
+    function TRSMinimap.getRunEnergy(): Int32;
+
+Returns the players current run energy.
+
+.. note::
+
+    - by slacky
+    - Last Updated: 28 Feb. 2015
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.getRunEnergy() < 20 then
+      minimap.enableRest();
+*)
+function TRSMinimap.getRunEnergy(): Int32;
+var
+  w,h,bmp,src:Int32;
+  TPA:TPointArray;
+  tmpVar:String;
+
+  function FindColorsTolBitmap(bmp:Int32; var TPA:TPointArray; color:Int32; B:TBox; tol:Int32): Boolean;
+  var oldT,T:Int32;
+  begin
+    oldT := GetImageTarget();
+    T := SetTargetBitmap(bmp);
+    try
+      SetImageTarget(T);
+      Result := FindColorsTolerance(TPA, color, B, tol);
+    finally
+      FreeTarget(T);
+      SetImageTarget(oldT);
+    end;
+  end;
+
+begin
+  GetClientDimensions(w,h);
+  src := BitmapFromClient(w-38,31,w-10,38);
+  GetBitmapSize(bmp, w,h);
+  bmp := CreateBitmap(w+10,h+10);
+  FastDrawTransparent(5,5,src,bmp);
+  FreeBitmap(src);
+
+  GetBitmapSize(bmp,w,h);
+  W *= 6;
+  H *= 6;
+  ResizeBitmapEx(bmp,RM_Bilinear,w,h);
+  FindColorsTolBitmap(bmp, TPA, $FFFFFF, [0,0,w-1,h-1], Trunc(441.6*0.4));
+  FastDrawClear(bmp, 0);
+  DrawTPABitmap(bmp, TPA, $FFFFFF);
+  tmpVar := Tesseract_GetText(bmp, TESS_WHITELIST_NUMBERS+'%');
+  Result := StrToIntDef(ExtractFromStr(tmpVar, NUMBERS), -1);
+
+  FreeBitmap(bmp);
+end;
+
+(*
+isRunEnabled
+------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.isRunEnabled(): boolean;
+
+Returns true if the players run is enabled.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if minimap.isRunEnabled() then
+      writeln('Sup kid? I''m Usain Bolt. Prep2BRekt m8');
+*)
+function TRSMinimap.isRunEnabled(): boolean;
+var
+  tpa: TPointArray;
+begin
+  if findColorsTolerance(tpa, 2805490, self.button[MM_BUTTON_RUN].bounds, 20) then
+    result := (length(tpa) > 5);
+end;
+
+(*
+toggleRun
+---------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.toggleRun(enable: boolean);
+
+Returns true if it enables of disables run, depending on the **enable** parameter.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.toggleRun(true);
+*)
+procedure TRSMinimap.toggleRun(enable: boolean);
+var
+  p: TPoint;
+begin
+  p := self.button[MM_BUTTON_RUN].center;
+
+  case enable of
+    true:
+      if (not self.isRunEnabled()) then
+      begin
+        mouseCircle(p.x, p.y, self.button[MM_BUTTON_RUN].radius, MOUSE_LEFT);
+        print('minimap.toggleRun(): Enabled run', TDebug.SUB);
+      end;
+
+    false:
+      if (self.isRunEnabled()) then
+      begin
+        mouseCircle(p.x, p.y, self.button[MM_BUTTON_RUN].radius, MOUSE_LEFT);
+        print('minimap.toggleRun(): Disabled run', TDebug.SUB);
+      end;
+  end;
+end;
+
+(*
+toggleRun (overload)
+--------------------
+
+.. code-block:: pascal
+
+    procedure TRSMinimap.toggleRun(minRunPercent: integer); overload;
+
+Enables run only if the current run energy is above **minRunPercent** . This
+procedure hasn't beed coded yet because it requires getRunEnergy (see above).
+
+.. note::
+
+    - by Olly
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    minimap.toggleRun(50);
+*)
+procedure TRSMinimap.toggleRun(minRunPercent: integer); overload;
+begin
+  writeLn('WARNING TRSMinimap.toggleRun() overload: procedure hasn''t been coded yet');
+  exit();
+
+  if (not self.isRunEnabled()) then
+    if self.getRunEnergy() > minRunPercent then
+      self.toggleRun(true);
+end;
+
+{*
+__GridCoords16
+---------------
+
+.. code-block:: pascal
+
+    function __GridCoords16(Grid16: TPoint): TPoint;
+
+Helper for MMToMs.
+
+.. note::
+
+    - by Narcle
+    - Last Updated: 08 August 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    __GridCoords16(point(50, 50));
+*}
+{$IFNDEF CODEINSIGHT}
+function __GridCoords16(Grid16: TPoint): TPoint;
+var
+  Yh, yM, x, y: Extended;
+  p: TPoint;
+begin
+  p := mainScreen.playerPoint;
+
+  x := Grid16.x;
+  y := Grid16.y;
+  yM := 45.0;
+  Yh := Abs(Y + yM);
+
+  result.x := round(p.x + (X*6.7/(12.8-(Yh/yM*3.10)))*9.75);
+  result.y := round(p.y + Y * (4.40 + ((Yh/yM)*1.40)));
+
+  if (not pointInBox(result, mainScreen.getBounds())) then
+    result := [-1, -1];
+end;
+{$ENDIF}
+
+(*
+pointToMainscreen
+-----------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.pointToMainscreen(const point: TPoint): TPoint;
+
+Converts a point on the minimap to a point on the mainscreen
+
+.. note::
+
+    - by Narcle
+    - Last Updated: 21 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    p := minimap.pointToMainscreen(minimap.getCenterPoint());
+*)
+function TRSMinimap.pointToMainscreen(const point: TPoint): TPoint;
+begin
+  result := __GridCoords16([point.x-self.cx, point.y-self.cy]);
+end;
+
+(*
+pointsToMainscreen
+------------------
+
+.. code-block:: pascal
+
+    function TRSMinimap.pointsToMainscreen(points: TPointArray; sortFromPlayer: boolean = true): TPointArray;
+
+Converts a tpa **points** on the minimap to mainscreen points. It will delete
+points that aren't on the mainscreen. The TPA that is returned is sorted from
+the player by default.
+
+.. note::
+
+    - by Narcle
+    - Last Updated: 21 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    tpa := minimap.pointsToMainscreen(mmDots);
+*)
+function TRSMinimap.pointsToMainscreen(points: TPointArray; sortFromPlayer: boolean = true): TPointArray;
+var
+  i, hi: integer;
+  tmp: TPoint;
+begin
+  hi := high(points);
+
+  if (hi < 0) then
+    exit;
+
+  for i := 0 to hi do
+  begin
+    tmp := self.pointToMainscreen(points[i]);
+
+    if (not tmp.equals(point(-1, -1))) then
+      insert(tmp, result);
+  end;
+
+  if (sortFromPlayer) then
+    sortTPAFrom(result, mainScreen.playerPoint);
+end;
+
+begin
+  minimap.__init();
+end;
+
+{$f+}

@@ -1,0 +1,2408 @@
+(*
+Bank Screen
+============
+
+The bankscreen file holds functions and procedures that are used in the runescape bank screen.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/bankscreen.simba>`_.
+
+*)
+
+{$f-}
+
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the bankScreen methods.
+
+*)
+
+{*
+**const Internal**
+
+Internal bankscreen constants.
+
+*}
+const
+  _BANK_SLOTS_OFFSET: TPoint = [41, 108];
+  _PACK_SLOTS_OFFSET: TPoint = [516, 94];
+  _TAB_OFFSET: TPoint = [34, 66];
+  BANK_SLOT_LOW = 1;
+  BANK_SLOT_HIGH = 28;
+
+(*
+**const Deposit Buttons**
+
+Constants that represent the the quick deposit buttons.
+
+    * QUICK_DEPOSIT_INVENTORY
+    * QUICK_DEPOSIT_EQIUPMENT
+    * QUICK_DEPOSIT_BOB
+    * QUICK_DEPOSIT_MONEY_POUCH
+
+*)
+const
+  QUICK_DEPOSIT_INVENTORY   = 0;
+  QUICK_DEPOSIT_EQIUPMENT   = 1;
+  QUICK_DEPOSIT_BOB         = 2;
+  QUICK_DEPOSIT_MONEY_POUCH = 3;
+
+(*
+**const Bank Buttons**
+
+Constants that represent the bank buttons.
+
+    * BANK_BUTTON_PIN
+    * BANK_BUTTON_PRESET_SETUP
+    * BANK_BUTTON_PRESET_1
+    * BANK_BUTTON_PRESET_2
+    * BANK_BUTTON_NOTE
+
+*)
+const
+  BANK_BUTTON_SEARCH = 0;
+  BANK_BUTTON_PIN = 1;
+  BANK_BUTTON_PRESET_SETUP = 2;
+  BANK_BUTTON_PRESET_1 = 3;
+  BANK_BUTTON_PRESET_2 = 4;
+  BANK_BUTTON_NOTE = 5;
+
+(*
+**const Withdraw Options**
+
+Constants that represent different withdraw options.
+
+    * WITHDRAW_AMOUNT_ALL
+    * WITHDRAW_AMOUNT_ALL_BUT_ONE
+
+*)
+const
+  WITHDRAW_AMOUNT_ALL = -1;
+  WITHDRAW_AMOUNT_ALL_BUT_ONE = -2;
+
+(*
+**const Bank Open Options**
+
+Constants that represent the different banks supported by SRL-6
+
+    * BANK_NPC_BLUE
+    * BANK_NPC_GREY
+    * BANK_NPC_GREEN
+    * BANK_NPC_DRAYNOR
+    * BANK_BOOTH
+    * BANK_GE
+    * BANK_CHEST_SW
+    * BANK_CHEST_SHANTAY
+    * BANK_CHEST_DUEL
+    * BANK_CHEST_CW
+    * BANK_CHEST_GROTTO
+    * BANK_CHEST_LUMBRIDGE
+    * BANK_TABLE_BURTHORPE
+    * BANK_CHEST_PRIFDDINAS
+    * BANK_CHEST_BARB_OUTPOST
+
+*)
+const
+  BANK_NPC_BLUE = 0;
+  BANK_NPC_GREY = 1;
+  BANK_NPC_GREEN = 2;
+  BANK_NPC_DRAYNOR = 3;
+  BANK_BOOTH = 4;
+  BANK_GE = 5;
+  BANK_CHEST_SW = 6;
+  BANK_CHEST_SHANTAY = 7;
+  BANK_CHEST_DUEL = 8;
+  BANK_CHEST_CW = 9;
+  BANK_CHEST_GROTTO = 10;
+  BANK_CHEST_LUMBRIDGE = 11;
+  BANK_TABLE_BURTHORPE = 12;
+  BANK_CHEST_PRIFDDINAS = 13;
+  BANK_CHEST_BARB_OUTPOST = 14;
+
+(*
+**type TRSBankScreen**
+
+.. code-block:: pascal
+
+    type
+      TRSBankScreen = type TRSInterface;
+
+A type that stores the bankScreen interface properties.
+
+*)
+type
+  TRSBankScreen = type TRSInterface;
+
+{*
+** type TBankColors **
+
+An internal type that stores the name and color information for a bank type
+
+*}
+{$IFNDEF CODEINSIGHT}
+type
+  TBankColors = record
+    name: String;
+    color: TColorData;
+  end;
+
+  TBankColorsArray = Array of TBankColors;
+{$ENDIF}
+
+(*
+**var bankScreen**
+
+.. code-block:: pascal
+
+    var
+      bankScreen: TRSBankScreen;
+
+A variable through which scripters can access the TRSBankScreen type methods.
+
+*)
+var
+  bankScreen: TRSBankScreen;
+
+{*
+**var bankColors**
+
+A variable which holds all the bank color information
+
+*}
+{$IFNDEF CODEINSIGHT}
+var
+  bankColors: TBankColorsArray;
+{$ENDIF}
+
+(*
+TRSBankScreen methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **bankScreen** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.isOpen() then
+      writeln('Bank screen is open!');
+*)
+
+{*
+TBankColorsArray.__getProfileColor
+-----------------------------------
+
+.. code-block:: pascal
+
+    function TBankColorsArray.__getProfileColor(name: String): T2DColorData;
+
+Returns the T2DColorData for the bankType **name**
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 6 September 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    bankColors.__getProfileColor('BANK_NPC_BLUE');
+
+*}
+{$IFNDEF CODEINSIGHT}
+function TBankColorsArray.__getProfileColor(name: String): T2DColorData;
+var
+  i, j: Integer;
+begin
+  setLength(result, 0);
+
+  for i := 0 to high(self) do
+    if (pos(name, self[i].name) > 0) then
+    begin
+      setLength(result, length(result) + 1);
+      result[j] := self[i].color;
+      inc(j);
+    end;
+end;
+{$ENDIF}
+
+{*
+TBankColorsArray.__load
+-----------------------
+
+.. code-block:: pascal
+
+    procedure TBankColorsArray.__load(path: String);
+
+Calculates CTS2 colors from individual colors that are in the same aca profile.
+Saves all the CTS2 colors and profile names into self. The **path** should
+direct to a .aca file, which is saved from Cynic's ACA Remake.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 6 September 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    bankColors.__load(IncludePath + 'srl-6\lib\interfaces\bankscreen.aca');
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TBankColorsArray.__load(path: String);
+begin
+end;
+{$ENDIF}
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSBankScreen.__init();
+
+Initializes the TRSBankScreen.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 10 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    bankScreen.__init();
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSBankScreen.__init();
+begin
+  with (self) do
+  begin
+    name := 'RS Bank Screen';
+    ID := ID_INTERFACE_BANKSCREEN;
+    parentID := -1;
+    isStatic := false;
+    bankColors.__load(IncludePath + 'srl-6\lib\interfaces\bankscreen.aca');
+  end;
+end;
+{$ENDIF}
+
+{*
+TRSBankScreen.__find
+~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function TRSBankScreen.__find(): boolean;
+
+Returns true if the bankScreen interface is detected and its bounds are set.
+Scripters should use bankScreen.isOpen() below.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 18 March 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.__find() then
+      writeln('The bank screen is open, and the bounds are set!');
+*}
+{$IFNDEF CODEINSIGHT}
+function TRSBankScreen.__find(): boolean;
+var
+  TPA: TPointArray;
+  ATPA, ATPA2: T2DPointArray;
+  i, w, h: integer;
+  b: TBox;
+begin
+  getClientDimensions(w, h);
+                          // Black box around "BANK OF RUNESCAPE"
+  if findColors(TPA, 65536, 0, 0, w-1, 50) then
+  begin
+    ATPA := TPA.cluster(5);
+    ATPA.sortBySize(true);
+
+    for i := 0 to high(ATPA) do
+    begin
+      b := ATPA[i].getBounds();
+
+      if (b.getWidth() = 479) and (b.getHeight() = 31) then
+      begin
+        b.offset(point(0, 554)); // Offset to buttons at bottom
+
+        if findColors(TPA, 4578368, b) then // Green arrow colour
+        begin
+          ATPA2 := TPA.cluster(5);
+
+          if length(ATPA2) = 6 then // 6 green arrows
+          begin
+            b.edit(-8, -562, 200, 7);
+            self.setBounds(b);
+            result := true;
+            break();
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+{$ENDIF}
+
+(*
+isOpen
+------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isOpen(waitTime: integer = 0): boolean;
+
+Returns true if the bankScreen interface is open. The optional **waitTime** parameter
+*(default = 0)* is the maximum time (in milliseconds) it will keep looking.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 17 March 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.isOpen() then
+      writeln('The banks is open! Let's start banking items!');
+*)
+function TRSBankScreen.isOpen(waitTime: integer = 0): boolean;
+var
+  t, itemTimer: longWord;
+  b: TBox;
+  tpa: TPointArray;
+begin
+  t := (getSystemTime() + waitTime);
+
+  repeat
+    if self.__find() then
+    begin
+      result := true;
+
+      // now we attempt to wait for items to load
+      b := gridBox(0, 10, 10, 35, 31, 44, 44, point(self.x + _BANK_SLOTS_OFFSET.x, self.y + _BANK_SLOTS_OFFSET.y));
+      itemTimer := (getSystemTime() + randomRange(1200, 1600));
+
+      while (getSystemTime() < itemTimer) do
+      begin
+        if (countColor(ITEM_OUTLINE_BLACK, b) > 5) then
+          break();
+
+        wait(randomRange(30, 60));
+      end;
+    end;
+
+    if (waitTime > 0) then
+      wait(randomRange(30, 60));
+
+  until result or (getSystemTime() >= t);
+end;
+
+(*
+close
+-----
+
+.. code-block:: pascal
+
+    function TRSBankScreen.close(escape: boolean = true): boolean;
+
+Returns true if the bankScreen is successfully closed. It uses the ESC key
+by default, but the **escape** parameter can be set to false to close via the mouse.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 19 March 2014 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.close() then
+      writeln('Closed the bankscreen');
+*)
+function TRSBankScreen.close(escape: boolean = true): boolean;
+var
+  timeOut: LongWord;
+begin
+  result := false;
+
+  if (not self.isOpen()) then
+    exit(true);
+
+  // try ESC key first
+  if escape then
+  begin
+    timeOut := (getSystemTime() + randomRange(600, 900));
+    repeat
+      multiType(VK_ESCAPE, randomRange(30, 50), 2);
+      wait(100 + random(50));
+      if not self.isOpen() then exit(true);
+    until ((getSystemTime() > timeOut) or result);
+  end;
+
+  // click the X as a failsafe
+  mouseBox(intToBox(self.x1 + 465, self.y1 + 15, self.x2 - 207, self.y1 + 30), MOUSE_MOVE);
+
+  // this is a failsafe in case the bankscreen closes (from the ESC key) while moving the mouse
+  if self.isOpen() then
+  begin
+    fastClick(MOUSE_LEFT);
+    wait(50 + random(50));
+  end else
+    exit(true);
+
+  // wait for the bankscreen to close
+  timeOut := (getSystemTime() + randomRange(5000, 6000));
+  while (timeOut > getSystemTime()) do
+  begin
+    if (not self.__find()) then
+    begin
+      result := true;
+      break;
+    end;
+
+    wait(50 + random(50));
+  end;
+
+  print('bankScreen.close(): result = '+boolToStr(result), TDebug.SUB);
+end;
+
+{*
+__isDepositButtonVaild
+----------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen._isDepositButtonVaild(depositType: integer): boolean;
+
+Returns true if the deposit button **depositType** is a valid button.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 20 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if (bankscreen.__isDepositButtonVaild(DEPOSIT_BUTTON_DEPOSIT_ALL)) then
+      writeln('It''s valid!');
+*}
+function TRSBankScreen._isDepositButtonVaild(depositType: integer): boolean;
+const
+  DEPOSIT_BUTTON_LOW = 0;
+  DEPOSIT_BUTTON_HIGH = 3;
+begin
+  result := inRange(depositType, DEPOSIT_BUTTON_LOW, DEPOSIT_BUTTON_HIGH);
+
+  if (not result) then
+    print('bankScreen._isDepositButtonVaild(): Button "' + intToStr(depositType) + '" is invaild', TDebug.WARNING);
+end;
+
+{*
+__isBankSlotVaild
+-----------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen._isBankSlotVaild(slot: integer): boolean;
+
+Returns true if the bank slot **slot** is vaild.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 20 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if bankscreen.__isBankSlotVaild(25) then
+      writeln('Yay!');
+*}
+function TRSBankScreen._isBankSlotVaild(slot: integer): boolean;
+const
+  BANK_SLOT_LOW = 1;
+  BANK_SLOT_HIGH = 100;
+begin
+  result := inRange(slot, BANK_SLOT_LOW, BANK_SLOT_HIGH);
+
+  if (not result) then
+    print('bankScreen._isBankSlotVaild(): Slot '+toStr(slot)+' is invalid', TDebug.WARNING);
+end;
+
+(*
+getBankSlotBoxes
+----------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getBankSlotBoxes(): TBoxArray;
+
+Returns a TBoxArray of all of the bank slot boxes.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 04 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      boxArr: TBoxArray;
+    begin
+      boxArr := bankScreen.getBankSlotBoxes();
+
+    end;
+*)
+function TRSBankScreen.getBankSlotBoxes(): TBoxArray;
+begin
+  if (not self.isOpen()) then
+    exit();
+
+  result := grid(10, 10, 35, 31, 44, 44, point(self.x + _BANK_SLOTS_OFFSET.x, self.y + _BANK_SLOTS_OFFSET.y));
+end;
+
+(*
+getBankSlotBox
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getBankSlotBox(slot: integer): TBox;
+
+Returns a TBox of the bank slot **slot** . The layout of the slots can be seen
+`here <http://i.imgur.com/9yGO1zV.png>`_.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 04 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      box: TBox;
+    begin
+      box := bankScreen.getBankSlotBox(1);
+      mouseBox(box, MOUSE_MOVE);
+    end;
+*)
+function TRSBankScreen.getBankSlotBox(slot: integer): TBox;
+begin
+  result := [-1, -1, -1, -1];
+
+  if (not self._isBankSlotVaild(slot)) then
+    exit();
+
+  if (not self.isOpen()) then
+    exit();
+
+  // - 1 because the grid (array) starts at 0.
+  result := gridBox(slot -1, 10, 10, 35, 31, 44, 44, point(self.x + _BANK_SLOTS_OFFSET.x, self.y + _BANK_SLOTS_OFFSET.y));
+end;
+
+(*
+getPackSlotBoxes
+----------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getPackSlotBoxes: TBoxArray;
+
+Returns a TBoxArray of all of the backpack slots in the bank interface.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 15 July 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      boxArr: TBoxArray;
+    begin
+      boxArr := bankScreen.getPackSlotBoxes();
+
+    end;
+*)
+function TRSBankScreen.getPackSlotBoxes: TBoxArray;
+begin
+  if (not self.isOpen()) then
+    exit();
+
+  result := grid(4, 7, 35, 31, 46, 36, point(self.x + _PACK_SLOTS_OFFSET.x, self.y + _PACK_SLOTS_OFFSET.y));
+end;
+
+(*
+getPackSlotBox
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getPackSlotBox(slot: integer): TBox;
+
+Returns the TBox of the desired backpack slot in the bank interface. Pack slots
+start at the top left at 1 and count across the columns.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 15 July 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      b: TBox;
+    begin
+      b := bankscreen.getPackSlotBox(1);
+      mouseBox(b, MOUSE_RIGHT);
+    end;
+
+*)
+function TRSBankScreen.getPackSlotBox(slot: integer): TBox;
+begin
+  if (not self.isOpen()) then
+    exit();
+
+  if (not inRange(slot, BACKPACK_SLOT_LOW, BACKPACK_SLOT_HIGH)) then
+  begin
+    print('bankScreen.getPackSlotBox(): Slot '+toStr(slot)+' is invalid', TDebug.WARNING);
+    exit(intToBox(-1, -1, -1, -1));
+  end;
+
+  // - 1 because the grid (array) starts at 0.
+  result := gridBox(slot -1, 4, 7, 35, 31, 46, 36, point(self.x + _PACK_SLOTS_OFFSET.x, self.y + _PACK_SLOTS_OFFSET.y));
+end;
+
+(*
+getPackCount
+------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getPackCount(): integer;
+
+Returns the number of items in the bankscreen's pack.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 24 November 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      c: integer;
+    begin
+      c := bankscreen.getPackCount();
+      writeLn('There is ' + toStr(c) + ' items in the pack');
+    end;
+
+*)
+function TRSBankScreen.getPackCount(): integer;
+var
+  b: TBoxArray := bankscreen.getPackSlotBoxes();
+  i: integer;
+begin
+  for i := 0 to high(b) do
+    if isItemIn(b[i]) then
+      inc(result);
+end;
+
+{*
+__isPackSlotVaild
+-----------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.__isPackSlotVaild(slot: integer): boolean;
+
+Returns true if the vaild (within the range of 1..28).
+
+.. note::
+
+    - by Olly
+    - Last Updated: 02 January 2013 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.__isPackSlotVaild(25) then
+      writeln('Slot 25 is a vaild bankscreen pack slot!');
+
+*}
+function TRSBankScreen._isPackSlotVaild(slot: integer): boolean;
+begin
+  result := inRange(slot, BANK_SLOT_LOW, BANK_SLOT_HIGH);
+
+  if (not result) then
+    print('bankScreen._isPackSlotVaild(): Slot '+toStr(slot)+' is invalid', TDebug.WARNING);
+end;
+
+
+(*
+isItemInPackSlot
+----------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isItemInPackSlot(slot: integer): boolean;
+
+Returns true if an item is in the backpack slot **slot** inside the bankscreen
+interface.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 02 January 2013 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+   if bankScreen.isItemInPackSlot(1) then
+     writeln('We have an item in pack slot number 1');
+*)
+function TRSBankScreen.isItemInPackSlot(slot: integer): boolean;
+begin
+  if (not self.isOpen()) or (not self._isPackSlotVaild(slot))then
+    exit(false);
+
+  result := isItemIn(self.getPackSlotBox(slot));
+end;
+
+(*
+isPackFull
+----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isPackFull(): boolean;
+
+Returns true if the backpack inside the bankscreen interface is full.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 02 January 2013 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+   if bankScreen.isPackFull() then
+     writeln('Our bankscreen pack is full!');
+
+*)
+function TRSBankScreen.isPackFull(): boolean;
+var
+  i: integer;
+begin
+  if (not self.isOpen()) then
+    exit(false);
+
+  for i := BANK_SLOT_LOW to BANK_SLOT_HIGH do
+    if (not (self.isItemInPackSlot(i))) then
+      exit(false);
+
+  result := true;
+end;
+
+(*
+isPackEmpty
+-----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isPackEmpty(): boolean;
+
+Returns true if the backpack inside the bankscreen interface is empty.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 5 February 2015 by HKbotz
+
+Example:
+
+.. code-block:: pascal
+
+   if bankScreen.isPackEmpty() then
+     writeln('Our bankscreen pack is empty!');
+
+*)
+function TRSBankScreen.isPackEmpty(): boolean;
+begin
+  if (not self.isOpen()) then
+    exit(false);
+
+  result := (not self.getPackSlotBoxes().getBounds().colorExists(ITEM_OUTLINE_BLACK));
+end;
+
+(*
+getPackCountDTM
+---------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getPackCountDTM(dtm: integer): integer;
+
+Return the number of backpack slots that contain the DTM **dtm** inside the bank
+screen interface.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 02 January 2013 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      dtm: integer;
+      i: integer;
+    begin
+      dtm := dtmFromString('lotsofstuffhere');
+      i := bankScreen.getPackCountDTM(dtm);
+      writeln('We counted ' + intToStr(i) + ' items in our bankScreen pack.');
+    end;
+*)
+function TRSBankScreen.getPackCountDTM(dtm: integer): integer;
+var
+  i, l: integer;
+begin
+  result := 0;
+
+  if (not self.isOpen()) then
+    exit();
+
+  result := findItem(dtm, self.getPackSlotBoxes());
+
+  if (result = 0) then
+  begin
+    print('bankScreen.packCountDTM(): Found no DTM matches', TDebug.SUB);
+    exit();
+  end;
+
+  print('bankScreen.packCountDTM(): Counted ' + intToStr(result) + ' items');
+end;
+
+(*
+getPackCountBitmap
+------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.getPackCountBitmap(bmp, tolerance: integer): integer;
+
+Return the number of backpack slots that contain the bitmap **bmp** inside the bank
+screen interface.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 02 January 2013 by Ashaman88
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      bmp: integer;
+      i: integer;
+    begin
+      bmp := bitmapFromString('lotsofstuffhere');
+      i := bankScreen.getPackCountBitmap(bmp, 10);
+      writeln('We counted ' + intToStr(i) + ' items in our pack.');
+    end;
+*)
+function TRSBankScreen.getPackCountBitmap(bmp, tolerance: integer): integer;
+begin
+  result := 0;
+
+  if (not self.isOpen()) then
+    exit();
+
+  result := findItem(bmp, tolerance, self.getPackSlotBoxes());
+
+  if (result = 0) then
+  begin
+    print('bankScreen.packCountBitmap(): Found no bitmap matches', TDebug.SUB);
+    exit();
+  end;
+
+  print('bankScreen.packCountBitmap(): Counted ' + intToStr(result) + ' items');
+end;
+
+{*
+__getTabBounds
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.__getTabBounds(tab: integer): TBox;
+
+Returns the TBox of the desired bankscreen tab.  Tab slots
+start on the left at 1 and count across.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 10 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      b: TBox;
+    begin
+      b := bankscreen.__getTabBounds(1);
+
+    end;
+*}
+function TRSBankScreen._getTabBounds(tab: integer): TBox;
+begin
+  if (not self.isOpen()) then
+  begin
+    print('Unable to get tab bounds since the bankscreen isn''t open', TDebug.ERROR);
+    exit();
+  end;
+
+  // - 1 because the grid (array) starts at 0.
+  result := gridBox(tab -1, 9, 1, 45, 35, 46, 0, point(self.x + _TAB_OFFSET.x, self.y + _TAB_OFFSET.y));
+end;
+
+{*
+__doesTabExist
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen._doesTabExist(tab: integer): boolean;
+
+Returns true if the **tab** exists.  If **tab** is the "Add Tab" tab, it will return
+false.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 10 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (not bankscreen.__doesTabExist(3)) then
+      exit();
+*}
+function TRSBankScreen._doesTabExist(tab: integer): boolean;
+var
+  tabBox: TBox;
+  px, py: integer;
+begin
+  result := false;
+
+  if (not self.isOpen()) then
+    exit();
+
+  tabBox := self._getTabBounds(tab);
+
+  if (tabBox.x1 <> -1) then
+    Result:= (countColor(6672631, tabBox) <> 5); // gold color of the very top of the "+"
+end;
+
+(*
+isTabActive
+-----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isTabActive(tab: integer): boolean;
+
+Returns true if the bankScreen **tab** is the currently active tab.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 4 April 2014 by riwu
+
+Example:
+
+.. code-block:: pascal
+
+    if (not bankscreen.isTabActive(3)) then
+      bankscreen.openTab(3);
+*)
+function TRSBankScreen.isTabActive(tab: integer): boolean;
+var
+  tabBox: TBox;
+begin
+  result := false;
+
+  if (not self.isOpen()) then
+    exit();
+
+  tabBox := self._getTabBounds(tab);
+  tabBox.edit(0, 20, 0, 0);  // Only consider bottom half of the tab
+
+  if (tabBox.x1 <> -1) then
+    result := (countColorTolerance(1380879, tabBox, 7) < 50); //color at the bottom of inactive tabs
+end;
+
+(*
+openTab
+-------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.openTab(tab: integer): boolean;
+
+Returns true if it successfully opens the bank tab **tab** .
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 10 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    bankscreen.openTab(4);
+*)
+function TRSBankScreen.openTab(tab: integer): boolean;
+var
+  boxTab: TBox;
+  t: LongWord;
+begin
+  if (not self._doesTabExist(tab)) then
+  begin
+    print('TRSBankScreen.openTab(): Tab '+toStr(tab)+' doesn''t exist', TDebug.WARNING);
+    exit(false);
+  end;
+
+  print('TRSBankScreen.openTab()', TDebug.HEADER);
+
+  result := self.isTabActive(tab);
+
+  if (not result) then
+  begin
+    boxTab := self._getTabBounds(tab);
+
+    if (boxTab.x1 <> -1) then
+    begin
+      mouseBox(boxTab, MOUSE_LEFT);
+      print('Tab is valid, clicking...');
+
+      t := (getSystemTime() + 3000);
+
+      while (not result) and (getSystemTime() < t) do
+      begin
+        print('Waiting for tab to activate...');
+        result := self.isTabActive(tab);
+        wait(300 + random(200));
+      end;
+    end;
+
+  end else
+    print('Tab '+toStr(tab)+' is already active');
+
+  print('TRSBankScreen.openTab(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+scrollUp
+--------
+
+.. code-block:: pascal
+
+    procedure TRSBankScreen.scrollUp();
+
+Scrolls the bankscreen up to the top.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 10 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    bankScreen.scrollUp();
+*)
+procedure TRSBankScreen.scrollUp();
+const
+  COLOR_RESULT = 3321831; // color when scroll bar is all the way up
+var
+  col : integer;
+  t : LongWord;
+  tpa: TPointArray;
+  scrollP, p: TPoint;
+  itemArea, b: TBox;
+begin
+  if (not self.isOpen()) then
+    exit();
+
+  p := [self.x + 474, self.y + 102]; // top of the scroll bar (when it's at the top)
+
+  col := getColor(p);
+
+  // color at top of scroller = already at top | no scroll bar color
+  if (col = COLOR_RESULT) or (col = 1709067) then
+    exit();
+
+  print('bankScreen.scrollUp(): Going to scroll the bankscreen up to the top');
+
+  b := self.getBounds();
+
+  itemArea := [b.x1 + 13, b.y1 + 97, b.x2 - 221, b.y2 - 61];
+  scrollP := itemArea.getRandomPoint();
+
+  t := (getSystemTime() + 15000);
+
+  // scroll the mouse using the mouse wheel
+  repeat
+    if (getColor(p) = COLOR_RESULT) then
+      break;
+
+    mouseScroll(scrollP, 10 + random(10), false);
+    wait(10 + random(20));
+
+  until(getSystemTime() > t);
+end;
+
+(*
+quickDeposit
+------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.quickDeposit(depositType: integer): boolean;
+
+Returns true if it clicks the quick deposit button **depositType** . Valid depositType
+constants are located at the top of this page.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 29 June 2015 by Turpinator
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.isOpen(5000) then
+      bankScreen.quickDeposit(QUICK_DEPOSIT_INVENTORY);
+*)
+function TRSBankScreen.quickDeposit(depositType: integer): boolean;
+const
+  DEPOSIT_BUTTON_OFFSET: TPoint = [-320, -24];
+var
+  b: TBox;
+  tba: TBoxArray;
+begin
+  result := true;
+
+  if (not self._isDepositButtonVaild(depositType)) then
+    exit(false);
+
+  if (not self.isOpen()) then
+  begin
+    print('bankScreen.quickDeposit(): Unable to quick-deposit since bankscreen isn''t open', TDebug.ERROR);
+    exit(false);
+  end;
+
+  b := gridBox(depositType, 4, 1, 29, 25, 34, 0,
+               point(self.x2 + DEPOSIT_BUTTON_OFFSET.x,
+                     self.y2 + DEPOSIT_BUTTON_OFFSET.y));
+
+  mouseBox(b, MOUSE_LEFT);
+  wait(200 + random(300));
+
+  print('bankScreen.quickDeposit(): Clicked quick deposit id ' + intToStr(depositType), TDebug.SUB);
+end;
+
+(*
+clickButton
+-----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.clickButton(button: integer; useKey: boolean = true): boolean;
+
+Returns true if it clicks the bank button **button** . If **useKey** is set to true
+*(default = true)* it will use the keyboard, else it will click the button with
+the mouse. Vaild button constants are located at the top of this page.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 29 June 2015 by Turpinator
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.isOpen(5000) then
+      bankScreen.clickButton(BANK_BUTTON_PRESET_1);
+*)
+function TRSBankScreen.clickButton(button: integer; useKey: boolean = true): boolean;
+const
+  BUTTON_OFFSET: TPoint = [-661, -24];
+var
+  b: TBox;
+  timeOut: LongWord;
+begin
+  if (not self.isOpen()) then
+  begin
+    print('bankScreen.clickButton(): Unable to click button since bankscreen isn''t open', TDebug.ERROR);
+    exit(false);
+  end;
+
+  b := gridBox(button, 6, 1, 29, 25, 34, 0,
+               point(self.x2 + BUTTON_OFFSET.x,
+                     self.y2 + BUTTON_OFFSET.y));
+
+  // try ESC key first
+  if useKey and ((button = BANK_BUTTON_PRESET_1) or (button = BANK_BUTTON_PRESET_2)) then
+  begin
+    timeOut := (getSystemTime() + randomRange(1500, 2000));
+    repeat
+      multiType(toStr(button - 2), randomRange(30, 50), 2, false);
+      wait(100 + random(50));
+     if (not self.isOpen()) then exit(true);
+    until((getSystemTime() > timeOut) or result);
+  end;
+
+  mouseBox(b, MOUSE_MOVE);
+
+  if (self.isOpen()) then
+  begin
+    fastClick(MOUSE_LEFT);
+    wait(50 + random(50));
+  end else
+    exit(true);
+
+  wait(100 + random(150));
+  result := true;
+end;
+
+(*
+pointToSlot
+-----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.pointToSlot(pnt: TPoint): integer;
+
+Returns the bank slot which the TPoint **pnt** fall within. If it doesn't fall
+within any slot, it returns -1.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 20 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      x, y, myDTM: Integer;
+    begin
+      myDTM := DTMFromString('heapsofstuff');
+
+      if findDTM(myDTM, x, y, getClientBounds()) then
+        writeLn('Found DTM in slot ' + toStr(bankScreen.pointToSlot([x, y]));
+    end;
+*)
+function TRSBankScreen.pointToSlot(pnt: TPoint): integer;
+var
+  i: integer;
+  slots: TBoxArray;
+  hi: integer;
+begin
+  result := -1;
+
+  slots := self.getBankSlotBoxes();
+  hi := high(slots);
+
+  for i := 0 to hi do
+    if pointInBox(pnt, slots[i]) then
+      exit(i + 1); // +1 since array starts at 0.
+end;
+
+(*
+enterAmount
+------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.enterAmount(amount, waitTime: integer): boolean;
+
+Returns true if it enters the amount **amount** when depositing or withdrawing
+a custom amount of an item. It will keep trying until successful or **waitTime**
+is reached.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 19 December by Thomas
+
+Example:
+
+.. code-block:: pascal
+
+    bankScreen.enterAmount(50, 5000);
+*)
+function TRSBankScreen.enterAmount(amount, waitTime: integer): boolean;
+begin
+  result := chatBox.enterAmount(amount, waitTime);
+  print('TRSBankScreen._enterAmount(): result = '+lowercase(boolToStr(result)), TDebug.SUB);
+end;
+
+(*
+deposit
+-------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.deposit(slots: TIntegerArray; amounts: TIntegerArray = []; oneByOne: boolean = false): boolean;
+
+Rturns true if it deposits items from the backpack into the bank. It can deposit
+all items, or specific slots and amounts. It can also deposit each item one by one.
+
+    * **slots** : The slots you want to deposit
+    * **amounts** : The amounts of the slots to deposit. Set to -1 to deposit all. Deposits all of every item by default.
+    * **oneByOne** : Will click items one by one to deposit *(default = false)*
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 24 May 2015 by The Mayor
+
+Examples:
+
+.. code-block:: pascal
+
+    bankScreen.deposit([2..28]);
+    bankScreen.deposit([1, 2, 3, 4], [-1, 10, 15, 14]);
+    bankScreen.deposit([1..28], [], true); // one by one
+*)
+function TRSBankScreen.deposit(slots: TIntegerArray; amounts: TIntegerArray = []; oneByOne: boolean = false): boolean;
+var
+  b: TBox;
+  i: integer;
+  t: LongWord;
+begin
+  result := true;
+
+  if (length(slots) < 1) then
+  begin
+    print('bankScreen.deposit(): No deposit slots specified', TDebug.WARNING);
+    exit(false);
+  end;
+
+  if (length(amounts) > 0) and (length(amounts) <> length(slots)) then
+  begin
+    print('bankScreen.deposit(): Slot and amount arrays are of different length, they need to be the same!', TDebug.WARNING);
+    exit(false);
+  end;
+
+  if (not self.isOpen()) then
+  begin
+    print('bankScreen.deposit(): Unable to deposit since bankscreen isn''t open', TDebug.ERROR);
+    exit(false);
+  end;
+
+  if (length(amounts) = 0) then // Fill the amounts array to avoid errors
+  begin
+    setLength(amounts, length(slots));
+
+    for i := 0 to high(amounts) do
+      amounts[i] := -1;
+
+    if (not oneByOne) then slots.shuffle(); // So the first slot isn't always clicked first
+  end;                                      // Only shuffle if the amounts array is empty
+                                            // and not oneByOne
+  for i := 0 to high(slots) do
+  begin
+    b := self.getPackSlotBox(slots[i]);
+
+    if (not isItemIn(b))then
+      continue;
+
+    if oneByOne then
+    begin
+      mouseBox(b, MOUSE_LEFT);
+      wait(100 + random(200));
+    end else
+    begin
+      mouseBox(b, MOUSE_RIGHT);
+
+      if (amounts[i] = -1) then
+      begin
+        writeLn(slots);
+        writeLn(amounts);
+        if (not chooseOption.select(['Deposit-All', 'sit-All', 'All'], 300)) then
+          chooseOption.select(['Deposit', 'osit']); // In case there's only one
+      end else
+        if (not chooseOption.select([toStr(amounts[i])], MOUSE_LEFT, 300)) then
+          if chooseOption.select(['Deposit-X', '-X']) then
+            chatBox.enterAmount(amounts[i], random(5000, 6000));
+    end;
+
+    t := (getSystemTime() + 2500);  // Wait for the item to disappear
+
+    while (getSystemTime() < t) do
+      if (not isItemIn(b)) then
+        break
+      else
+        wait(50 + random(25));
+
+    if isItemIn(b) then
+    begin
+      print('bankScreen.deposit(): Failed to deposit item in slot ' + toStr(slots[i]), TDebug.ERROR);
+      result := false;
+    end;
+
+  end;
+
+  print('bankScreen.deposit(): ' + toStr(result), TDebug.SUB);
+end;
+
+(*
+withdraw
+--------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.withdraw(slot, amount: integer; mouseOverText: TStringArray; asNote: boolean = false; toFamiliar: boolean = false): boolean;
+
+Returns true if items are withdrawn from the bank.
+
+    * **slot** : The bank slot to withdraw from
+    * **amount** : The amount to withdraw. This can be any number, *or* one of the contants at the top of this page.
+    * **mouseOverText** : The overText of the item. To ignore the overText, leave it blank ([''])
+    * **asNote** : Withdraw the item as a note? *(default = false)*
+    * **toFamiliar** : Withdraw the item to a familiar? *(default = false)*
+
+.. note::
+
+    - by Olly
+    - Last Updated: 04 December 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    // To withdraw 28 items from slot 1 if mouseOverText is vaild
+    bankscreen.withdraw(1, 28, ['Yew Log', 'Log']);
+
+    // To withdraw 500 items as notes from slot 1 if mouseOverText is valid
+    bankscreen.withdraw(1, 500, ['Yew Log', 'Log'], true);
+
+     // To withdraw all items from slot 10 if mouseOverText is vaild
+    bankscreen.withdraw(10, WITHDRAW_AMOUNT_ALL, ['Yew Log', 'Log']);
+
+    // To withdraw 28 items from slot 1 and will *ignore* mouseOverText
+    bankScreen.withdraw(1, 28, ['']);
+
+    // To withdraw 28 items from slot 1 into your beast of burden familiar if mouseOverText is valid
+    bankScreen.withdraw(1, 28, ['Yew Log', 'Log'], false, true);
+*)
+function TRSBankScreen.withdraw(slot, amount: integer; mouseOverText: TStringArray; asNote: boolean = false; toFamiliar: boolean = false): boolean;
+var
+  b: TBox;
+begin
+  result := false;
+  b := self.getBankSlotBox(slot);
+
+  if asNote then
+  begin
+    if not self.isButtonActive(BANK_BUTTON_NOTE) then
+    begin
+      self.clickButton(BANK_BUTTON_NOTE);
+      wait(125 + random(50));
+    end;
+  end else
+  begin
+    if self.isButtonActive(BANK_BUTTON_NOTE) then
+    begin
+      self.clickButton(BANK_BUTTON_NOTE);
+      wait(125 + random(50));
+    end;
+  end;
+
+  if (b.x1 = -1) then // invaild slot
+  begin
+    print('bankscreen.withdraw(): Invalid slot '+toStr(slot), TDebug.WARNING);
+    exit;
+  end;
+
+  if (not isItemIn(b)) then // no item in the slot?
+  begin
+    print('bankscreen.withdraw(): No item in slot '+toStr(slot), TDebug.WARNING);
+    exit;
+  end;
+
+  mouseBox(b, MOUSE_MOVE);
+
+  if (length(mouseOverText[0]) > 0) then
+    if (not isMouseOverText(mouseOverText, 250)) then
+    begin
+      print('bankscreen.withdraw(): Incorrect Mouse-over text, result = false', TDebug.SUB);
+      exit(false);
+    end;
+
+  if (amount = 1) then     // single item? let's just click it
+  begin
+    fastClick(MOUSE_LEFT);
+    wait(400 + random(300));
+    print('bankscreen.withdraw(): result = true', TDebug.SUB);
+    exit(true);
+  end else
+    fastClick(MOUSE_RIGHT);  // more than 1 item? open choose options
+
+  if (chooseOption.isOpen(2000)) then
+  begin
+    case (amount) of
+      WITHDRAW_AMOUNT_ALL: result := chooseOption.select(['Withdraw-All', '-All']);
+      WITHDRAW_AMOUNT_ALL_BUT_ONE: result := chooseOption.select(['Withdraw-All but one', 'All but one']);
+
+      // check if the number is already availble, else let's withdraw X it
+      else begin
+        if toFamiliar then
+        begin
+          if (chooseOption.select(['Withdraw-X to BoB', 'to', 'BoB'])) then
+          begin
+            result := chatBox.enterAmount(amount, random(5000, 6000));
+            print('bankscreen.withdraw(): result = ' + boolToStr(result), TDebug.SUB);
+            exit();
+          end else
+          begin
+            result := false;
+            chooseOption.close();
+            print('bankscreen.withdraw(): Withdraw-X to BoB option not present.  result = ' + boolToStr(result), TDebug.ERROR);
+            exit();
+          end;
+        end;
+        if (not chooseOption.optionsExist(['Withdraw-' + intToStr(amount), '-' + intToStr(amount), toStr(amount)])) then
+        begin
+          if (chooseOption.select(['Withdraw-X', '-X'])) then
+            result := chatBox.enterAmount(amount, random(5000, 6000));
+        end else
+          result := chooseOption.select(['Withdraw-' + intToStr(amount), '-' + intToStr(amount), toStr(amount)]);
+        end;
+     end;
+  end else
+    print('bankscreen.withdraw(): chooseOption menu failed to open', TDebug.SUB);
+
+  print('bankscreen.withdraw(): result = ' + boolToStr(result), TDebug.SUB);
+end;
+
+(*
+withdraw (overload 1)
+---------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.withdraw(dtm, amount: integer; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+
+Returns true if items are withdrawn from the bank. This overload takes a DTM instead
+of an array of slots.
+
+    * **dtm** : The DTM to look for
+    * **amount** : The amount to withdraw. This can be any number, *or* one of the contants at the top of this page.
+    * **asNote** : Withdraw the item as a note? *(default = false)*
+    * **toFamiliar** : Withdraw the item to a familiar? *(default = false)*
+
+.. note::
+
+    - by Olly
+    - Last Updated: 04 December 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    //To withdraw 28 items normally
+    bankScreen.withdraw(dtm, 28);
+
+    //To withdraw 50 items as notes
+    bankScreen.withdraw(dtm, 28, true);
+
+    //To withdraw 28 items to your beast of burden familiar
+    bankScreen.withdraw(dtm, 28, false, true);
+*)
+function TRSBankScreen.withdraw(dtm, amount: integer; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+var
+  p: TPoint;
+  slot: integer;
+  b: TBox;
+begin
+  result := false;
+
+  // just to wait for items to appear in bank
+  b := self.getBankSlotBoxes().getBounds();
+  waitColorCountRange(ITEM_OUTLINE_BLACK, 0, b, 3600 + random(500), 1);
+
+  if (not findDTM(dtm, p.x, p.y, b)) then
+    exit;
+
+  slot := self.pointToSlot(p);
+
+  if (slot <> -1) then
+    result := self.withdraw(slot, amount, [''], asNote, toFamiliar);
+end;
+
+(*
+withdraw (overload 2)
+---------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.withdraw(bitmap, tolerance, amount: integer; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+
+Returns true if items are withdrawn from the bank. This overload takes a bitmap
+instead of an array of slots or a DTM.
+
+    * **bitmap** : The bitmap to look for
+    * **tolerance** : The tolerance used in the bitmap search
+    * **amount** : The amount to withdraw. This can be any number, *or* one of the contants at the top of this page.
+    * **asNote** : Withdraw the item as a note? *(default = false)*
+    * **toFamiliar** : Withdraw the item to a familiar? *(default = false)*
+
+.. note::
+
+    - by Olly
+    - Last Updated: 04 December 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    //To withdraw 28 items normally from slot 10
+    bankScreen.withdraw(bmp, 10, 28);
+
+    //To withdraw 50 items as notes from slot 10
+    bankScreen.withdraw(bmp, 10, 50, true);
+
+    //To withdraw 28 items from slot 10 to your beast of burden familiar
+    bankScreen.withdraw(bmp, 10, 28, false, true);
+*)
+function TRSBankScreen.withdraw(bitmap, tolerance, amount: integer; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+var
+  p: TPoint;
+  slot: integer;
+  b: TBox;
+begin
+  result := false;
+
+  // just to wait for items to appear in bank
+  b := self.getBankSlotBoxes().getBounds();
+  waitColorCountRange(ITEM_OUTLINE_BLACK, 0, b, 2500 + random(500), 1);
+
+  if (not findBitmapToleranceIn(bitmap, p.x, p.y, b, tolerance)) then
+    exit;
+
+  slot := self.pointToSlot(p);
+
+  if (slot <> -1) then
+    result := self.withdraw(slot, amount, [''], asNote, toFamiliar);
+end;
+
+(*
+withdraw (overload 3)
+---------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.withdraw(text: String; acc: extended; slot, amount: integer; waitTime: integer = 0; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+
+Returns true if items are withdrawn from the bank. This overload uses the 'string
+match' method for the mouseOverText.
+
+    * **text** : The mouseOverText of the item
+    * **acc** : The minimum accuracy of the string match
+    * **slot** : The bank slot to look in
+    * **amount** : The amount to withdraw. This can be any number, *or* one of the contants at the top of this page.
+    * **waitTime** : The max time to wait for the string to match
+    * **asNote** : Withdraw the item as a note? *(default = false)*
+    * **toFamiliar** : Withdraw the item to a familiar? *(default = false)*
+
+.. note::
+
+    - by Kevin
+    - Last Updated: 04 December 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    // To withdraw 28 items from slot 1 if mouseover text is valid, and waitTime of 1500ms
+    bankscreen.withdraw('Yew Log', 0.8, 1, 28, 1500);
+
+     // To withdraw all items from slot 10 if mouseover text is valid, with default waitTime
+    bankscreen.withdraw('Yew Log', 0.8, 10, WITHDRAW_AMOUNT_ALL);
+
+    //To withdraw all items from slot 10 if mouseover text is valid, as notes
+    bankscreen.withdraw('Yew Log', 0.8, 10, WITHDRAW_AMOUNT_ALL, 1000, true);
+
+    // To withdraw 28 items from slot 1 into your beast of burden familiar if mouseover text is valid, and waitTime of 1000ms
+    bankScreen.withdraw('Yew Log', 0.8, 1, 28, 1000, false, true);
+*)
+function TRSBankScreen.withdraw(text: String; acc: extended; slot, amount: integer; waitTime: integer = 0; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+var
+  b: TBox;
+  t: LongWord;
+begin
+  result := false;
+  b := self.getBankSlotBox(slot);
+
+  if asNote then
+  begin
+    if not self.isButtonActive(BANK_BUTTON_NOTE) then
+    begin
+      self.clickButton(BANK_BUTTON_NOTE);
+      wait(125 + random(50));
+    end;
+  end else
+  begin
+    if self.isButtonActive(BANK_BUTTON_NOTE) then
+    begin
+      self.clickButton(BANK_BUTTON_NOTE);
+      wait(125 + random(50));
+    end;
+  end;
+
+  if (b.x1 = -1) then // invaild slot
+  begin
+    print('bankscreen.withdraw(): Invalid slot ' + toStr(slot), TDebug.WARNING);
+    exit;
+  end;
+
+  if (not isItemIn(b)) then // no item in the slot?
+  begin
+    print('bankscreen.withdraw(): No item in slot ' + toStr(slot), TDebug.WARNING);
+    exit;
+  end;
+
+  mouseBox(b, MOUSE_MOVE);
+  t := (getSystemTime() + waitTime);
+
+  while (t > getSystemTime()) do
+  begin
+    if (length(text) > 0) then
+      if (StringMatch(StringReplace(getMouseOverText(true), #$A, '',[rfReplaceAll]), 'Withdraw-1 ' + text) < acc) then
+      begin
+        print('bankscreen.withdraw(): Incorrect Mouse-over text, result = false. Expected ' + text + '. Read ' + getMouseOverText(true), TDebug.SUB);
+        wait(25 + random(25));
+        exit(false);
+      end;
+
+    if (amount = 1) then     // single item? let's just click it
+    begin
+      fastClick(MOUSE_LEFT);
+      wait(400 + random(300));
+      print('bankscreen.withdraw(): result = true', TDebug.SUB);
+      exit(true);
+    end else
+      fastClick(MOUSE_RIGHT);  // more than 1 item? open choose options
+
+    if (chooseOption.isOpen(2000)) then
+    begin
+      case (amount) of
+        WITHDRAW_AMOUNT_ALL: result := chooseOption.select(['Withdraw-All', '-All']);
+        WITHDRAW_AMOUNT_ALL_BUT_ONE: result := chooseOption.select(['Withdraw-All but one', 'All but one']);
+
+      // check if the number is already availble, else let's withdraw X it
+        else begin
+          if toFamiliar then
+          begin
+            if (chooseOption.select(['Withdraw-X to BoB', 'to', 'BoB'])) then
+            begin
+              result := chatBox.enterAmount(amount, random(5000, 6000));
+              print('bankscreen.withdraw(): result = ' + boolToStr(result), TDebug.SUB);
+              exit();
+            end else
+            begin
+              result := false;
+              chooseOption.close();
+              print('bankscreen.withdraw(): Withdraw-X to BoB option not present.  result = ' + boolToStr(result), TDebug.ERROR);
+              exit();
+            end;
+          end;
+          if (not chooseOption.optionsExist(['Withdraw-' + intToStr(amount), '-' + intToStr(amount), toStr(amount)])) then
+          begin
+            if (chooseOption.select(['Withdraw-X', '-X'])) then
+              result := chatBox.enterAmount(amount, random(5000, 6000));
+          end else
+            result := chooseOption.select(['Withdraw-' + intToStr(amount), '-' + intToStr(amount), toStr(amount)]);
+          end;
+      end;
+    end else
+       print('bankscreen.withdraw(): chooseOption menu failed to open', TDebug.SUB);
+
+     print('bankscreen.withdraw(): result = ' + boolToStr(result), TDebug.SUB);
+  end;
+end;
+
+(*
+withdraw (overload 4)
+---------------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.withdraw(dtm, amount: integer; waitTime: integer = 0; text: string; acc: extended; asNote: boolean = false; toFamiliar: boolean = false): boolean;
+
+Returns true if items are withdrawn from the bank. This overload takes a DTM and
+also uses the string match method. It is essentially a combination of overload 1
+and 3.
+
+    * **dtm** : The DTM to look for
+    * **amount** : The amount to withdraw. This can be any number, *or* one of the contants at the top of this page.
+    * **waitTime** : The max time to wait for the string to match
+    * **text** : The mouseOverText of the item
+    * **acc** : The minimum accuracy of the string match
+    * **asNote** : Withdraw the item as a note? *(default = false)*
+    * **toFamiliar** : Withdraw the item to a familiar? *(default = false)*
+
+.. note::
+
+    - by Kevin
+    - Last Updated: 04 December 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    //To withdraw 28 items normally
+    bankScreen.withdraw(dtm, 28);
+
+    //To withdraw 28 items named 'Potato seed'
+    bankScreen.withdraw(dtm, 28, 1000, 'Potato seed', 0.8);
+
+    //To withdraw 28 items named 'Potato seed' as notes
+    bankScreen.withdraw(dtm, 28, 1000, 'Potato seed', 0.8, true);
+
+    //To withdraw 28 items named 'Potato seed' to your beast of burden familiar, and 1500ms waitTime
+    bankScreen.withdraw(dtm, 28, 1500, 'Potato seed', 0.8, false, true);
+
+*)
+function TRSBankScreen.withdraw(dtm, amount: integer; waitTime: integer = 0; text: string; acc: extended; asNote: boolean = false; toFamiliar: boolean = false): boolean; overload;
+var
+  slot, i: integer;
+  tpa: TPointArray;
+  b: TBox;
+begin
+  result := false;
+
+  // just to wait for items to appear in bank
+  b := self.getBankSlotBoxes().getBounds();
+  waitColorCountRange(ITEM_OUTLINE_BLACK, 0, b, 3600 + random(500), 1);
+
+  if (not findDTMs(dtm, tpa, b)) then
+    exit;
+
+  for i:=0 to high(tpa) do
+  begin
+    slot := self.pointToSlot(tpa[i]);
+
+    if (slot <> -1) then
+      result := self.withdraw(text, acc, slot, amount, waitTime, asNote, toFamiliar);
+    if result then
+      Exit;
+  end;
+end;
+
+(*
+_waitBankOrPinScreen
+--------------------
+
+.. code-block:: pascal
+
+    function _waitBankOrPinScreen(waitTime: integer): boolean;
+
+Returns true if the bankScreen or pinScreen is open within **waitTime**
+
+.. note::
+
+    - by Olly
+    - Last Updated: 22 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    _waitBankOrPinscreen(5000);
+*)
+function _waitBankOrPinScreen(waitTime: integer): boolean;
+var
+  t: LongWord;
+begin
+  t := (getSystemTime() + waitTime);
+  result := false;
+
+  while (t > getSystemTime()) do
+  begin
+    if (bankScreen.isOpen() or pinScreen.isOpen()) then
+      exit(true);
+
+    wait(25 + random(25));
+  end;
+end;
+
+{*
+__open
+------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.__open(bankType: Integer): Boolean;
+
+Opens the bank **bankType** . Scripters should use backScreen.open() below
+instead.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 6 September 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    bankScreen.__open(BANK_NPC_BLUE);
+
+*}
+function TRSBankScreen.__open(bankType: Integer): Boolean;
+var
+  i, x, y: Integer;
+  cols: T2DColorData;
+  TPA, ATPA: T2DPointArray;
+begin
+  print('TRSBankscreen.__open()', TDebug.HEADER);
+
+  case bankType of
+    BANK_NPC_BLUE: cols := bankColors.__getProfileColor('BANK_NPC_BLUE');
+    BANK_NPC_GREY: cols := bankColors.__getProfileColor('BANK_NPC_GREY');
+    BANK_NPC_GREEN: cols := bankColors.__getProfileColor('BANK_NPC_GREEN');
+    BANK_NPC_DRAYNOR: cols := bankColors.__getProfileColor('BANK_NPC_DRAYNOR');
+    BANK_TABLE_BURTHORPE: cols := bankColors.__getProfileColor('BANK_TABLE_BURTHORPE');
+    BANK_CHEST_LUMBRIDGE: cols := bankColors.__getProfileColor('BANK_CHEST_LUMBRIDGE');
+
+    // I will update these ones when I have access to them
+    BANK_BOOTH: cols := [[3237496, 6, [2, [0.18, 0.68, 0.00]]]];
+    BANK_CHEST_SW: cols := [[8946555, 15, [2, [0.18, 0.18, 0.00]]], [5863053, 10, [2, [0.13, 0.10, 0.00]]]];
+    BANK_CHEST_SHANTAY: cols := [[4335674, 6, [2, [0.38, 1.96, 0.00]]], [7247287, 6, [2, [0.16, 1.41, 0.00]]]];
+    BANK_CHEST_DUEL: cols := [[11512192, 18, [2, [0.39, 0.57, 0.00]]], [6586289, 10, [2, [0.21, 1.00, 0.00]]]];
+    BANK_CHEST_CW: cols := [[8088922, 16, [2, [0.06, 0.17, 0.00]]], [4808312, 17, [2, [0.03, 0.17, 0.00]]]];
+    BANK_CHEST_GROTTO: cols := [[6842737, 6, [2, [0.31, 0.08, 0.00]]], [2570316, 4, [2, [0.15, 1.35, 0.00]]]];
+    BANK_CHEST_PRIFDDINAS: cols := [[2729983, 12, [1, [0.07, 0.00, 0.00]]], [7528447, 16, [2, [0.24, 0.00, 0.00]]]];
+    BANK_CHEST_BARB_OUTPOST: cols := [[10258280, 19, [2, [0.06, 0.49, 0.00]]], [3424082, 8, [2, [0.12, 0.21, 0.00]]]];
+  end;
+
+  setLength(TPA, length(cols));
+
+  for i := 0 to high(cols) do
+  begin
+    if cols[i].gatherIn(TPA[i], mainScreen.getBounds()) then
+      mainscreen.filterPointsPlayer(TPA[i]);
+
+    if (length(TPA[i]) < 10) then
+    begin
+      print('TRSBankScreen.__open(): Didn''t find enough bank color ' + toStr(i), TDebug.FOOTER);
+      exit();
+    end;
+  end;
+
+  ATPA := TPA[high(cols)].cluster(10);
+  ATPA.filterBetween(1, 10);
+
+  if (length(ATPA) < 1) then
+  begin
+    print('TRSBankScreen.__open(): No color clusters large enough', TDebug.FOOTER);
+    exit();
+  end;
+
+  ATPA.sortFromMidPoint(mainScreen.playerPoint);
+
+  for i := 0 to high(ATPA) do
+    if TPA[0].isPointNear(middleTPA(ATPA[i]), 15) then
+    begin
+      mouse(ATPA[i].getBounds().getGaussPoint());
+
+      if isMouseOverText(['ank Ba', 'ank Co', 'ank Gn', 'pen Sh', 'Use Ba', 'hest']) then
+      begin
+        if (random(3) <> 0) then
+        begin
+          getMousePos(x, y);
+          if not multiClick([x, y], 15, 2)then continue();
+        end else
+        begin
+          fastClick(MOUSE_RIGHT);
+          if not chooseOption.select(['ank Ba', 'ank Co', 'ank Gn', 'pen Sh', 'Use Ba', 'hest']) then continue();
+        end;
+
+        if minimap.isFlagPresent() then minimap.waitFlag(randomRange(12, 15));
+
+        if _waitBankOrPinScreen(randomRange(6000, 8000)) then
+        begin
+          result := True;
+          break();
+        end;
+      end;
+    end;
+
+  print('TRSBankscreen.__open() result = ' + boolToStr(result), TDebug.FOOTER);
+end;
+
+{$IFNDEF CODEINSIGHT}
+function TRSBankScreen.__openGE(): Boolean;
+
+  function findBankerAreas(): TBoxArray;
+  var
+    TPA: TPointArray;
+    ATPA: T2DPointArray;
+    i: Integer;
+    b: TBox;
+  begin
+    FindColorsTolerance(TPA, 6580588, MainScreen.GetBounds(), 5, ColorSetting(2, 2.09, 0.55));
+    ATPA := ClusterTPAEx(TPA, 5, 5);
+
+    for i := 0 to High(ATPA) do
+    begin
+      if (Length(ATPA[i]) < 100) then
+        Continue;
+
+      b := GetTPABounds(ATPA[i]);
+
+      if (b.getWidth() < 15) or (b.getHeight() < 15) or
+         (b.getWidth() > 220) or (b.getHeight() > 220) or
+         (ATPA[i].getDensity() < 0.10) then
+        Continue;
+
+      b.Expand(10);
+      b.setLimit(MainScreen.getBounds());
+
+      Result := Result + b;
+    end;
+  end;
+
+  function findBanker(const Area: TBox): Boolean;
+  var
+    tFace, TPA: TPointArray;
+    aFace, ATPA: T2DPointArray;
+    i, j: Integer;
+    b: TBox;
+    p: TPoint;
+  begin
+    if (not FindColorsTolerance(tFace, 5408694, Area, 15, ColorSetting(2, 0.18, 0.67))) then
+      Exit(False);
+
+    aFace := ClusterTPAEx(tFace, 3, 3);
+    SortATPAFromMidPoint(aFace, MiddleBox(Area));
+
+    for i := 0 to High(aFace) do
+      if (Length(aFace[i]) > 4) and (Length(aFace[i]) < 50) then
+      begin
+        p := MiddleTPA(aFace[i]);
+        b := intToBox(p.x - 12, p.y, p.x + 12, p.y + 30);
+
+        if (not FindColorsTolerance(TPA, 11382432, b, 9, ColorSetting(2, 5.57, 0.48))) then
+          Continue();
+
+        ATPA := ClusterTPAEx(TPA, 4, 4);
+        SortATPASize(ATPA, True);
+
+        for j := 0 to High(ATPA) do
+        begin
+          if (Length(ATPA[j]) < 15) then
+            Continue();
+
+          mouse(ATPA[j].getMiddle().randRange(-4, 5));
+
+          if (isMouseOverText(['Bank Banker', 'ank Bank'])) then
+          begin
+            fastClick(MOUSE_LEFT);
+
+            if (minimap.isFlagPresent(Random(300, 600))) then
+              minimap.waitFlag(10);
+
+            Result := _waitBankOrPinScreen(Random(4000, 5000));
+            if (Result) then
+              Exit(True);
+         end;
+        end;
+      end;
+  end;
+
+var
+  i: Integer;
+  Boxes: TBoxArray;
+begin
+  Result := False;
+  Boxes := findBankerAreas();
+
+  if (Length(Boxes) = 0) then
+    Exit(print('bankScreen.__openGE(): Found no possible area''s for a banker to be in', False));
+
+  SortBoxesFromMidPoint(Boxes, MainScreen.playerPoint);
+
+  for i := 0 to High(Boxes) do
+    if (FindBanker(Boxes[i])) then
+      Exit(print('bankScreen.__openGE(): Succesfully opened the GE bank', True, '', TDebug.DEBUG));
+end;
+{$ENDIF}
+
+(*
+open
+----
+
+.. code-block:: pascal
+
+    function TRSBankScreen.open(bankType: integer): boolean;
+
+Opens the desired bank, current vaild 'bankType' constants are:
+
+    * BANK_NPC_BLUE
+    * BANK_NPC_GREY
+    * BANK_NPC_GREEN
+    * BANK_NPC_DRAYNOR
+    * BANK_BOOTH
+    * BANK_GE
+    * BANK_CHEST_SW
+    * BANK_CHEST_SHANTAY
+    * BANK_CHEST_DUEL
+    * BANK_CHEST_CW
+    * BANK_CHEST_GROTTO
+    * BANK_TABLE_BURTHORPE
+    * BANK_CHEST_LUMBRIDGE
+    * BANK_CHEST_PRIFDDINAS
+    * BANK_CHEST_BARB_OUTPOST
+.. note::
+
+    - by Olly
+    - Last Updated: 17 February 2014 by Turpinator
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.open(BANK_NPC_BLUE) then
+    begin
+      writeLn('The bank is open!');
+      bankScreen.quickDeposit(QUICK_DEPOSIT_INVENTORY);
+      bankScreen.close();
+    end;
+*)
+function TRSBankScreen.open(bankType: integer): boolean;
+begin
+  if (bankScreen.isOpen()) or (pinScreen.isOpen()) then
+    exit(true);
+
+  case bankType of
+    BANK_GE: Result := Self.__openGE();
+    else result := self.__open(bankType);
+  end;
+end;
+
+{*
+__isSearchOpen
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isSearchOpen(waitTime: integer = 0): boolean;
+
+Returns true if the bank search box is open. The optional **waitTime** parameter
+*(default = 0)* is the maximum time (in milliseconds) it will keep looking.
+
+.. note::
+
+    - by Serajin
+    - Last Updated: 30 November 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    if (not bankscreen.__isSearchOpen()) then
+      bankscreen.clickButton(BANK_BUTTON_SEARCH);
+*}
+{$IFNDEF CODEINSIGHT}
+function TRSBankScreen.__isSearchOpen(waitTime: integer = 0): boolean;
+var
+  t: longword;
+  tabBox: TBox;
+begin
+  result := false;
+  t := (getTimeRunning() + waitTime);
+
+  if (not self.isOpen()) then
+    exit();
+
+  repeat
+    result:= (countColorTolerance(9021887, self.getBounds(), 35) > 5000); // color of the paper like background.
+  until (getTimeRunning() >= t) or (result);
+end;
+{$ENDIF}
+
+(*
+isButtonActive
+--------------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.isButtonActive(button: integer): boolean;
+
+Returns true if the bank button **button** is activated. Valid button types
+consants are:
+
+    * BANK_BUTTON_SEARCH
+    * BANK_BUTTON_NOTE
+
+.. note::
+
+    - by Serajin
+    - Last Updated: 29 June 2015 by Turpinator
+
+Example:
+
+.. code-block:: pascal
+
+    bankScreen.isButtonActive(BANK_BUTTON_NOTE);
+*)
+function TRSBankScreen.isButtonActive(button: integer): boolean;
+const
+  BUTTON_OFFSET: TPoint = [-661, -24];
+var
+  b: TBox;
+  timeOut: LongWord;
+begin
+  if (not self.isOpen()) then
+  begin
+    print('bankScreen.isButtonActive(): Unable to check button since bankscreen isn''t open', TDebug.ERROR);
+    exit(false);
+  end;
+
+  b := gridBox(button, 6, 1, 29, 25, 34, 0,
+               point(self.x2 + BUTTON_OFFSET.x,
+                     self.y2 + BUTTON_OFFSET.y));
+
+  result:= (countColorTolerance(5133403, b, 84) > 450);
+end;
+
+(*
+searchBank
+----------
+
+.. code-block:: pascal
+
+    function TRSBankScreen.searchBank(item: string): boolean;
+
+Returns true if the item **item** is searched for and found. Items that are
+found appear in bank slot 1.
+
+.. note::
+
+    - by Serajin
+    - Last Updated: 30 November 2014 by Serajin
+
+Example:
+
+.. code-block:: pascal
+
+    if bankScreen.searchBank('Chaos rune') then
+    begin
+      bankscreen.withdraw(1, WITHDRAW_AMOUNT_ALL, ['']);
+      bankScreen.close();
+    end;
+*)
+function TRSBankScreen.searchBank(item: string): Boolean;
+var
+t: longword;
+b: tBox;
+begin
+  result := false;
+
+  if (not self.isOpen()) then
+  begin
+    print('bankScreen.searchBank(): Unable to search since bankscreen isn''t open', TDebug.ERROR);
+    exit(false);
+  end; ;
+
+  if self.isButtonActive(BANK_BUTTON_SEARCH) then
+  begin
+    if not self.__isSearchOpen() then
+    begin
+      self.clickButton(BANK_BUTTON_SEARCH);
+      wait(1200 + random(400));
+    end;
+    typeSend(lowercase(item));
+    wait(100 + random(50));
+    result:= true;
+  end;
+
+  t := (getTimeRunning() + 5000);
+
+  if not self.isButtonActive(BANK_BUTTON_SEARCH) then  //If it's not activated, activate it.
+  begin
+    self.clickButton(BANK_BUTTON_SEARCH);
+    repeat
+      if self.__isSearchOpen() then
+        break;
+      wait(250 + random(50));
+    until (getTimeRunning() > t);
+    typeSend(lowercase(item));
+    wait(100 + random(50));
+    result:= true;
+  end;
+
+  if (countColorTolerance(10066329, self.getBounds(), 5) in [150..280]) then
+  begin
+    writeLn('No matches found!');
+    exit(false);
+  end;
+end;
+
+begin
+  bankscreen.__init();
+end;
+
+{$f+}

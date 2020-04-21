@@ -1,0 +1,314 @@
+(*
+Hero Screen
+===========
+
+The heroscreen file holds functions and procedures that are used to interact with the runescape Hero Screen.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/heroscreen.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the heroScreen methods.
+
+
+**type TRSHeroScreen**
+
+.. code-block:: pascal
+
+    type
+      TRSHeroScreen = type TRSInterface;
+
+A type that stores the Hero Screen interface properties.
+*)
+type
+  TRSHeroScreen = type TRSInterface;
+
+(*
+**var heroScreen**
+
+.. code-block:: pascal
+
+    var
+      heroScreen: TRSHeroScreen;
+
+A variable through which scripters can access the TRSHeroScreen type methods.
+
+*)
+var
+  heroScreen: TRSHeroScreen;
+
+(*
+TRSHeroScreen methods
+~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **heroScreen** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if heroScreen.isOpen() then
+      writeln('Herostone screen is open!');
+*)
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSHeroScreen.__init();
+
+Initializes the TRSHeroScreen.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 17 January 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    heroScreen.__init();
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSHeroScreen.__init();
+begin
+  with (self) do
+  begin
+    name := 'Hero Screen';
+    ID := ID_INTERFACE_HEROSCREEN;
+    parentID := -1;
+    isStatic := false;
+  end;
+end;
+{$ENDIF}
+
+{*
+__find
+------
+
+.. code-block:: pascal
+
+    function TRSHeroScreen.__find(): boolean;
+
+Returns true if the heroscreen interface is detected and its bounds are set.
+Scripters should use heroScreen.isOpen() below.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 17 January 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if heroScreen.__find() then
+      writeln('The herostone screen is open, and the bounds are set!');
+*}
+{$IFNDEF CODEINSIGHT}
+function TRSHeroScreen.__find(): boolean;
+const
+  BURGUNDY_COLOR = [1448256, 26]; // [Col, Tol] background of "HERO"
+var
+  i: Integer;
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+  b: TBox;
+begin
+  findColorsTolerance(TPA, BURGUNDY_COLOR[0], mainScreen.getBounds(), BURGUNDY_COLOR[1]);
+
+  if length(TPA) < 20 then
+  begin
+    print('TRSHeroScreen.__find(): Didn''t find enough BURGUNDY_COLOR', TDebug.WARNING);
+    exit(false);
+  end;
+
+  ATPA := TPA.cluster(4);
+  ATPA.filterBetween(1, 100);
+  ATPA.sortBySize(true);
+
+  for i := 0 to high(ATPA) do
+  begin
+    b := ATPA[i].getBounds();
+    if b.getWidth() < 100 then continue();
+
+    if (pos('HERO', upperCase(tesseract_GetText(b, TESS_FILTER_SMALL_CHARS))) > 0) then
+    begin
+      self.setBounds([b.x1 - 68, b.y1 - 5, b.x2 + 549, b.y2 + 511]);
+      exit(true);
+    end;
+  end;
+
+end;
+{$ENDIF}
+
+(*
+isOpen
+------
+
+.. code-block:: pascal
+
+    function TRSHeroScreen.isOpen(waitTime: integer = 0): boolean;
+
+Returns true if the heroScreen is open. The optional **waitTime** parameter
+*(default = 0)* is the maximum time (in milliseconds) it will keep looking.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 17 January 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if heroScreen.isOpen() then
+      writeln('It''s open!');
+
+*)
+function TRSHeroScreen.isOpen(waitTime: integer = 0): boolean;
+var
+  t: UInt64;
+begin
+  t := (GetTickCount() + waitTime);
+
+  repeat
+    if self.__find() then
+    begin
+      result := true;
+      break();
+    end;
+  until (getSystemTime() >= t);
+
+  print('TRSHeroScreen.isOpen(): Result = ' + boolToStr(result));
+end;
+
+(*
+open
+----
+
+.. code-block:: pascal
+
+    function TRSHeroScreen.open(waitTime: integer = 3000): boolean;
+
+Returns true if the heroScreen is successfully opened. The optional
+**waitTime** parameter *(default = 3000)* is the maximum time (in milliseconds)
+it will keep looking.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 17th January 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if heroScreen.open() then
+      writeln('We opened the hero screen');
+
+*)
+function TRSHeroScreen.open(waitTime: integer = 3000): boolean;
+var
+  i: integer;
+  timeOut: UInt64;
+begin
+  if self.isOpen() then
+    exit(true);
+
+  timeOut := GetTickCount() + waitTime + random(400);
+
+  mouseBox(gameTabs.navButtons[NAV_BUTTON_HERO][0], MOUSE_LEFT);
+
+  wait(randomRange(750, 1250));
+
+  while (GetTickCount() < timeOut) do
+    if self.isOpen(500) then
+    begin
+      result := true;
+      break();
+    end;
+
+  print('TRSHeroScreen.open() result: ' + boolToStr(result));
+end;
+
+(*
+close
+-----
+
+.. code-block:: pascal
+
+    function TRSHeroScreen.close(escape: boolean = true): boolean;
+
+Returns true if the heroScreen is successfully closed. It uses the ESC key
+by default, but the **escape** parameter can be set to false to close via the mouse.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 17 January 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if heroScreen.close() then
+      writeln('Closed the Hero screen');
+
+*)
+function TRSHeroScreen.close(escape: boolean = true): boolean;
+const
+  __CLOSE_OFFSET: TPoint = [751, 23]; // From self(x1, y1) to middle of 'X'
+var
+  timeOut: UInt64;
+begin
+  if (not self.isOpen()) then
+    exit(true);
+
+  if escape then // Try the escape button first if possible
+  begin
+    timeOut := (GetTickCount() + randomRange(600, 900));
+    repeat
+      typeByte(VK_ESCAPE);
+      wait(300 + random(50));
+    until (not self.isOpen()) or (GetTickCount() > timeOut);
+
+    if (not self.isOpen()) then
+      exit(true);
+  end;
+
+  if self.isOpen(100 + random(50)) then // Wait a bit in case it closes
+  begin
+    mouse(point(self.x1 + __CLOSE_OFFSET.x, self.y1 + __CLOSE_OFFSET.y).rand(3), MOUSE_LEFT);
+    timeOut := (GetTickCount() + randomRange(5000, 6000));
+
+    while (timeOut > GetTickCount()) do
+    begin
+      if (not self.isOpen()) then
+      begin
+        result := true;
+        break();
+      end;
+      wait(50 + random(50));
+    end;
+  end else
+    result := true;
+
+  print('TRSHeroScreen.close(): result = ' + boolToStr(result), TDebug.SUB);
+end;
+
+begin
+  heroScreen.__init();
+end;
+
+{$f+}

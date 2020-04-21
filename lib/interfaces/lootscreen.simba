@@ -1,0 +1,605 @@
+(*
+Loot Screen
+===========
+
+The loot screen file holds functions and procedures that are used in the runescape loot screen.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/lootscreen.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the lootScreen methods.
+
+*)
+
+{*
+const Internal
+--------------
+
+Internal lootscreen constants.
+
+*}
+const
+  LOOT_SLOT_LOW = 1;
+  LOOT_SLOT_HIGH = 28;
+
+(*
+**const Loot Buttons**
+
+Integer constants that represent the two loot buttons.
+
+    * LOOT_BUTTON_CUSTOM
+    * LOOT_BUTTON_ALL
+
+*)
+const
+  LOOT_BUTTON_CUSTOM = 0;
+  LOOT_BUTTON_ALL = 1;
+
+(*
+**type TRSLootScreen**
+
+.. code-block:: pascal
+
+    type
+      TRSLootScreen = type TRSInterface;
+
+A type that stores the loot screen interface properties.
+
+*)
+type
+  TRSLootScreen = type TRSInterface;
+
+(*
+**var lootScreen**
+
+.. code-block:: pascal
+
+    var
+      lootScreen: TRSLootScreen;
+
+A variable through which scripters can access the TRSLootScreen type methods.
+
+*)
+
+var
+  lootScreen: TRSLootScreen;
+
+(*
+TRSLootScreen methods
+~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **lootScreen** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if lootScreen.isOpen() then
+      writeln('Loot screen screen is open!');
+*)
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSLootScreen.__init();
+
+Initializes the TRSLootScreen.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 5th May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    lootScreen.__init();
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSLootScreen.__init();
+begin
+  with (self) do
+  begin
+    name := 'RS Loot Screen';
+    ID := ID_INTERFACE_LOOTSCREEN;
+    parentID := -1;
+    isStatic := false;
+  end;
+end;
+{$ENDIF}
+
+{*
+__find
+------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.__find(): boolean;
+
+Returns true if the lootScreen interface is detected and its bounds are set.
+Scripters should use lootScreen.isOpen() below.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 5 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootScreen.__find() then
+      writeln('The loot screen is open, and the bounds are set!');
+*}
+{$IFNDEF CODEINSIGHT}
+function TRSLootScreen.__find(): boolean;
+const
+  RED_COLOR = [726926, 8]; //[Color, Tol] of the close button in the top-right of the lootscreen
+  RED_COLOR_MOD = [0.04, 0.94]; //[Hue, Sat] of the close button in the top-right of the lootscreen
+var
+  b: TBox;
+  w, h, i : Integer;
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+begin
+  getClientDimensions(w, h);
+  findColorsTolerance(TPA, RED_COLOR[0], intToBox(120, 5, w - 1, h - 6), RED_COLOR[1], colorSetting(2, RED_COLOR_MOD[0], RED_COLOR_MOD[1]));
+
+  if length(TPA) < 10 then
+  begin
+    print('TRSLootScreen.__find(): Didn''t find enough RED_COLOR', TDebug.WARNING);
+    exit(false);
+  end;
+
+  ATPA := TPA.cluster(5);
+  ATPA.sortBySize(true);
+
+  for i := 0 to high(ATPA) do
+  begin
+    b := ATPA[i].getBounds();
+    if (not b.getWidth() = 14) or (not b.getHeight() = 14)
+      then continue();
+    b.edit(-130, 0, -95, +5);
+    if (pos('LOOT', upperCase(tesseract_GetText(b, TESS_FILTER_SMALL_CHARS))) > 0) then
+    begin
+      b.edit(+130, 0, +95, -5);
+      self.setBounds([b.x1 - 240, b.y1 - 16, b.x2 + 16, b.y2 + 240]);
+      exit(true);
+    end;
+  end;
+end;
+{$ENDIF}
+
+(*
+isOpen
+------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.isOpen(waitTime: integer = 0): boolean;
+
+Returns true if the lootScreen interface is open. The optional **waitTime** parameter
+*(default = 0)* is the maximum time (in milliseconds) it will keep looking.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 5 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootScreen.isOpen() then
+      writeln('The lootScreen is open!');
+
+*)
+function TRSLootScreen.isOpen(waitTime: integer = 0): boolean;
+var
+  t: UInt64;
+begin
+  t := (GetTickCount() + waitTime);
+
+  repeat
+    if self.__find() then
+    begin
+      result := true;
+      break();
+    end;
+  until (getSystemTime() >= t);
+
+  print('TRSLootScreen.isOpen(): Result = ' + boolToStr(result));
+end;
+
+(*
+close
+-----
+
+.. code-block:: pascal
+
+    function TRSLootScreen.close(): boolean;
+
+Returns true if the lootScreen screen is successfully closed.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 5 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootScreen.close() then
+      writeln('Closed the lootscreen');
+
+*)
+function TRSLootScreen.close(): boolean;
+const
+  __CLOSE_OFFSET: TPoint = [247, 23]; // From self(x1, y1) to middle of 'X'
+var
+  timeOut: UInt64;
+begin
+  if (not self.isOpen()) then
+    exit(true);
+
+  if self.isOpen(100 + random(50)) then // Wait a bit in case it closes
+  begin
+    mouse(point(self.x1 + __CLOSE_OFFSET.x, self.y1 + __CLOSE_OFFSET.y).rand(5), MOUSE_LEFT);
+    timeOut := (GetTickCount() + randomRange(5000, 6000));
+
+    while (timeOut > GetTickCount()) do
+    begin
+      if (not self.isOpen()) then
+      begin
+        result := true;
+        break();
+      end;
+      wait(50 + random(50));
+    end;
+  end else
+    result := true;
+
+  print('TRSLootScreen.close(): result = ' + boolToStr(result), TDebug.SUB);
+end;
+
+(*
+getSlotBoxes
+------------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.getSlotBoxes(): TBoxArray;
+
+Returns a TBoxArray of all of the lootScreen slot boxes.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 6 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    boxArr := lootScreen.getSlotBoxes();
+*)
+function TRSLootScreen.getSlotBoxes(): TBoxArray;
+begin
+  if (not self.isOpen()) then
+    exit();
+
+  result := grid(6, 5, 35, 31, 41, 36, point(self.x + 31, self.y + 58));
+end;
+
+{*
+__isSlotValid
+------------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.__isSlotValid(slot: integer): boolean;
+
+Returns true if the lootScreen slot **slot** is a valid slot number.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 6 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootscreen.__isSlotValid(25) then
+      writeln('Slot is valid!');
+*}
+function TRSLootScreen.__isSlotValid(slot: integer): boolean;
+begin
+  result := inRange(slot, LOOT_SLOT_LOW, LOOT_SLOT_HIGH);
+
+  if (not result) then
+    print('TRSLootScreen.__isSlotValid(): Slot ' + toStr(slot) + ' is invalid', TDebug.WARNING);
+end;
+
+(*
+getSlotBox
+----------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.getSlotBox(slot: integer): TBox;
+
+Returns the TBox of the lootScreen slot **slot**
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 5 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+   var
+     b: TBox;
+   begin
+     b := lootScreen.getSlotBox(1);
+*)
+function TRSLootScreen.getSlotBox(slot: integer): TBox;
+begin
+  if (not self.__isSlotValid(slot)) then
+    exit(intToBox(-1, -1, -1, -1));
+
+  result := self.getSlotBoxes()[slot -1];
+end;
+
+(*
+isItemInSlot
+------------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.isItemInSlot(slot: integer): boolean;
+
+Returns true if there is an item in the lootScreen slot **slot**
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 6 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootscreen.isItemInSlot(10) then
+      writeln('There is an item in slot 10!');
+*)
+function TRSLootScreen.isItemInSlot(slot: integer): boolean;
+begin
+  if (not self.isOpen()) or (not self.__isSlotValid(slot)) then
+    exit(false);
+
+  result := isItemIn(getSlotBox(slot));
+
+  print('TRSLootScreen.isItemInSlot(): Result = ' + boolToStr(result));
+end;
+
+(*
+lootSlot
+--------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.lootSlot(slot: integer): boolean;
+
+Loots the item in the lootScreen slot **slot**
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 12 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootscreen.lootSlot(10) then
+      writeln('Looted item from slot 10!');
+*)
+function TRSLootScreen.lootSlot(slot: integer): boolean;
+begin
+  if not self.isOpen() then
+  begin
+    print('TRSLootScreen.lootSlot(): lootscreen is not open.', TDebug.WARNING);
+    exit(false);
+  end;
+
+  result := self.isItemInSlot(slot);
+  if result then
+    mouseBox(self.getSlotBox(slot), MOUSE_LEFT);
+
+  print('TRSLootScreen.lootSlot(): Result = ' + boolToStr(result));
+end;
+
+(*
+lootSlots
+---------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.lootSlots(slots: TIntegerArray): boolean;
+
+Loots the items in the lootScreen slots **slots**
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 12 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootscreen.lootSlots([1, 3]) then
+      writeln('Looted items from slots 1 and 3!');
+*)
+function TRSLootScreen.lootSlots(slots: TIntegerArray): boolean;
+var
+  i: integer;
+begin
+  if not self.isOpen() then
+  begin
+    print('TRSLootScreen.lootSlot(): lootscreen is not open.', TDebug.WARNING);
+    exit(false);
+  end;
+  Quicksort(slots);
+  for i := high(slots) downto 0 do
+    if (self.lootSlot(slots[i])) then
+      result := true;
+
+  print('TRSLootScreen.lootSlots(): Result = ' + boolToStr(result));
+end;
+
+(*
+lootDTMs
+--------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.lootDTMs(DTMs: TIntegerArray): boolean;
+
+Loots all of the items that match any of the DTMs in the **DTMs** array.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 12 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if (lootscreen.lootDTMs([CopperDTM, BonesDTM])) then
+      writeln('Looted items by DTM');
+*)
+function TRSLootScreen.lootDTMs(DTMs: TIntegerArray): boolean;
+var
+  i, c: integer;
+  slots: TIntegerArray;
+begin
+  if not self.isOpen() then
+  begin
+    print('TRSLootScreen.lootDTMs(): lootscreen is not open.', TDebug.WARNING);
+    exit(false);
+  end;
+
+  for i := 0 to high(DTMs) do
+  begin
+    slots := findItem(DTMs[i], self.getSlotBoxes(), true);
+    if (length(slots) = 0) then
+      continue();
+    for c := 0 to high(slots) do
+    begin
+      self.lootSlot(slots[0] + 1);
+      wait(500 + random(250));
+    end;
+    if (length(slots) > 0) then
+      result := true;
+  end;
+
+  print('TRSLootScreen.lootDTMs(): Result = ' + boolToStr(result));
+end;
+
+(*
+lootDTM
+-------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.lootDTM(DTM: integer): boolean;
+
+Loots all of the items that match the DTM **DTM**
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 6 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if (lootscreen.lootDTM(BonesDTM)) then
+      writeln('Looted items by DTM');
+*)
+function TRSLootScreen.lootDTM(DTM: integer): boolean;
+begin
+  result := self.lootDTMs([DTM]);
+  print('TRSLootScreen.lootDTM(): Result = ' + boolToStr(result));
+end;
+
+(*
+clickButton
+-----------
+
+.. code-block:: pascal
+
+    function TRSLootScreen.clickButton(button: integer): boolean;
+
+Selects one of the two collect buttons. The **button** should be one of the two
+*Loot Button constants* at the top of this page.
+
+.. note::
+
+    - by BMWxi
+    - Last Updated: 6 May 2015 by BMWxi
+
+Example:
+
+.. code-block:: pascal
+
+    if lootscreen.clickButton(LOOT_BUTTON_ALL) then
+      writeln('Looted all items.');
+*)
+function TRSLootScreen.clickButton(button: integer): boolean;
+var
+  b: TBox;
+begin
+  if not self.isOpen() then
+  begin
+    print('TRSLootScreen.clickButton(): lootscreen is not open.', TDebug.WARNING);
+    exit(false);
+  end;
+  if (InRange(button, 0, 1)) then
+  begin
+    b := gridBox(button, 2, 1, 118, 24, 123, 0, point(self.x1 + 73, self.y1 + 245));
+    if (countColorTolerance(4501731, b, 72) > 1500) then
+    begin
+      mouseBox(b, MOUSE_LEFT);
+      result := true;
+    end;
+  end;
+  if (not result) then
+    print('TRSLootScreen.clickButton(): Button ' + toStr(button) + ' is invalid', TDebug.WARNING);
+  print('TRSLootScreen.clickButton(): Result = ' + boolToStr(result));
+end;
+
+begin
+  lootScreen.__init();
+end;
+
+{$f+}

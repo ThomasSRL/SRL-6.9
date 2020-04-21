@@ -1,0 +1,448 @@
+(*
+Chat Box
+========
+
+The chatbox file holds functions and procedures that are used in the runescape chat box.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/chatbox.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the chatBox methods.
+
+**const Tesseract Fiter**
+
+.. code-block:: pascal
+
+    const
+      TESS_FILTER_CHATBOX: TTesseractFilter = [3, 3, [False, 35, TM_Mean]];
+
+The TTesseractFilter that is used by the chatBox text functions by default.
+Scripters can create and use their own filters if they wish.
+
+*)
+const
+  TESS_FILTER_CHATBOX: TTesseractFilter = [3, 3, [False, 35, TM_Mean]];
+
+  CHATBOX_TRADES = 0;
+  CHATBOX_CHALLENGES = 1;
+  CHATBOX_ERRORS = 3;
+
+(*
+**type TRSChatBox**
+
+.. code-block:: pascal
+
+    type
+      TRSChatBox = type TRSInterface;
+
+A type that stores the chatBox interface properties.
+
+*)
+type
+  TRSChatBox = record(TRSInterface)
+    lineBoxes: TBoxArray;
+  end;
+
+(*
+**var chatBox**
+
+.. code-block:: pascal
+
+    var
+      chatBox: TRSChatBox;
+
+A variable through which scripters can access the TRSChatBox type methods.
+
+*)
+var
+  chatBox: TRSChatBox;
+
+(*
+TRSChatBox methods
+~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **chatBox** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if chatBox.findText(['Hello']) then
+      writeln('We found Hello in the chatBox');
+*)
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSChatBox.__init();
+
+Initializes the TRSChatBox.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 08 August 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    chatBox.__init();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSChatBox.__init();
+begin
+  with self do
+  begin
+    name := 'RS Chat Box';
+    ID := ID_INTERFACE_CHAT_BOX;
+    parentID := -1;
+    isStatic := false;
+  end;
+end;
+{$ENDIF}
+
+{*
+__setup
+-------
+
+.. code-block:: pascal
+
+    procedure TRSChatBox.__setup();
+
+Sets up the chatBox variables based on its size.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 1 August 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    chatBox.__setup();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSChatBox.__setup();
+var
+  b, chatBounds: TBox;
+  wid, hei, i: integer;
+  p: TPoint;
+begin
+  setLength(self.lineBoxes, 0);
+  getClientDimensions(wid, hei);
+
+  self.setBounds([1, actionBar.y2, gameTabs.tabArea.x1, hei-2]);
+  chatBounds := chatBox.getChatArea();
+
+  for i := 0 to 10 do
+  begin
+    p.y := 568 - (i * 14);
+    b := [chatBounds.x1, p.y - 7, chatBounds.x2, p.y + 7];
+
+    if (b.y1 < chatBox.getChatArea().y1) then
+      break();
+
+    insert(b, self.lineBoxes, high(self.lineBoxes)+1);
+  end;
+end;
+{$ENDIF}
+
+(*
+getChatArea
+-----------
+
+.. code-block:: pascal
+
+    function TRSChatBox.getChatArea(): TBox;
+
+Returns a TBox of the area where the chat text is located.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 17 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      area: TBox;
+    begin
+      area := chatBox.getChatArea();
+    end;
+*)
+function TRSChatBox.getChatArea(): TBox;
+begin
+  result := intToBox(self.x1+3, self.y1 + 68, self.x2-20, self.y2-22);
+end;
+
+(*
+findText
+--------
+
+.. code-block:: pascal
+
+    function TRSChatBox.findText(txt: TStringArray; const Filter: TTesseractFilter = TESS_FILTER_CHATBOX): boolean;
+
+Returns true if any of the text in **txt** is found anywhere in the chat box.
+The scripter has the option of using a custom TTesseractFilter **Filter** .
+
+.. note::
+
+    - by Olly
+    - Last Updated: 17 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if chatBox.findAnyText(['Hello']) then
+      writeLn('We found Hello in the chatBox');
+*)
+function TRSChatBox.findText(txt: TStringArray; const Filter: TTesseractFilter = TESS_FILTER_CHATBOX): boolean;
+var
+  s: string;
+begin
+  s := Tesseract_GetText(Self.getChatArea(), Filter);
+  if (length(s) > 1) then result := IsArrInStr(txt, s);
+end;
+
+(*
+getTextOnLine
+-------------
+
+.. code-block:: pascal
+
+    function TRSChatBox.getTextOnLine(Line: Integer; Filter: TTesseractFilter = TESS_FILTER_CHATBOX): String;
+
+Returns the string of text on chatBox line **Line** . The scripter has the
+option of using a custom TTesseractFilter **Filter** . The bottom line in the
+chatBox is line 0.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 17 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    writeLn(chatBox.getTextOnLine(0));
+*)
+function TRSChatBox.getTextOnLine(Line: Integer; Filter: TTesseractFilter = TESS_FILTER_CHATBOX): String;
+begin
+  if (not inRange(Line, Low(Self.lineBoxes), High(Self.lineBoxes))) then
+    Exit(Print('TRSChatBox.getTextOnLine(): Invaild line', False));
+
+  with (Self.lineBoxes[Line]) do
+    Result := Tesseract_GetText(x1, y1, x2, y2, Filter);
+end;
+
+(*
+findTextOnLines
+---------------
+
+.. code-block:: pascal
+
+    function TRSChatBox.findTextOnLines(txt: TStringArray; lines: TIntegerArray; Filter: TTesseractFilter = TESS_FILTER_CHATBOX): boolean;
+
+Returns true if any of the text in **txt** is found on any of the chatBox
+lines **lines** .The scripter has the option of using a custom TTesseractFilter
+**Filter** . The bottom line in the chatBox is line 0.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 17 October 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    // returns true if "Hello" or "Hi" is found on the first 4 lines
+    chatBox.findTextOnLines(['Hello', 'Hi'], [0..3]);
+*)
+function TRSChatBox.findTextOnLines(txt: TStringArray; lines: TIntegerArray; Filter: TTesseractFilter = TESS_FILTER_CHATBOX): boolean;
+var
+  i: integer;
+  s: string;
+begin
+  result := false;
+
+  for i := 0 to high(lines) do
+  begin
+    s := Self.getTextOnLine(Lines[i], Filter);
+    if (IsArrInStr(txt, s)) then
+    begin
+      print('TRSChatBox.findTextOnLines(): Found text '+toStr(txt)+' on line '+intToStr(lines[i]));
+      exit(true);
+    end;
+  end;
+end;
+
+(*
+getXPBar
+--------
+
+.. code-block:: pascal
+
+    function TRSChatBox.getXPBar(): Integer;
+
+Returns the XP from the XP bar when it is placed in the top right corner of
+the chatBox.
+
+.. note::
+
+    - by Ashaman88
+    - Last Updated: Some time in 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      xpGain: Integer;
+    begin
+      xpGain := chatBox.getXPBar() - StartXP;
+    end;
+*)
+function TRSChatBox.getXPBar(): Integer;
+const
+  Filter: TTesseractFilter = [5, 5, [False, 30, TM_Mean]];
+var
+  b: TBox;
+  i, p: Integer;
+  TPA, TextPoints: TPointArray;
+  ATPA: T2DPointArray;
+  s: String;
+begin
+  Result := 0;
+
+  if (not FindColorsTolerance(TPA, 13158856, IntToBox(Self.X2 - 220, Self.Y1 + 16, Self.X2 - 5, Self.Y1 + 38), 30, ColorSetting(2, 4.17, 0.23))) then
+  begin
+    Print('TRSChatBox.getXP(): Failed to find text to read', TDebug.ERROR);
+    Exit();
+  end;
+
+  ATPA := ClusterTPAEx(TPA, 1, 1);
+  for i := 0 to High(ATPA) do
+  begin
+    b := GetTPABounds(ATPA[i]);
+    if (inRange(b.getWidth(), 2, 7)) and (inRange(b.getHeight(), 5, 9)) then
+      Insert(ATPA[i], TextPoints);
+  end;
+
+  b := GetTPABounds(TextPoints);
+  if (b.getWidth() < 3) or (b.getHeight() < 3) then
+    Exit();
+
+  s := Tesseract_GetText(b.X1 - 2, b.Y1 - 5, b.X2 + 2, b.Y2 + 5, Filter);
+  p := Pos('xp', s);
+  if (p > 0) then
+    s := Copy(s, p + 2, Length(s) - (p + 1));
+
+  Result := StrToIntDef(ExtractFromStr(s, Numbers), 0);
+end;
+
+(*
+enterAmount
+-----------
+
+.. code-block:: pascal
+
+    function TRSChatBox.enterAmount(amount, waitTime: integer): boolean;
+
+Returns true if it enters the amount **amount** in the chatBox popup. It will
+keep trying until successful of **waitTime** is reached.
+
+.. note::
+
+    - by Thomas
+    - Last Updated: 11 December by Thomas
+
+Example:
+
+.. code-block:: pascal
+
+    chatBox.enterAmount(50, 5000);
+*)
+function TRSChatBox.enterAmount(amount, waitTime: integer): boolean;
+var
+  t: TCountDown;
+  BACKGROUND_COLOR: TColorData := [9086905, 65];
+begin
+  t.setTime(waitTime);
+
+  result := BACKGROUND_COLOR.waitCount(self.getBounds(), waitTime, 10000);
+
+  if result then
+    typeSend(intToStr(amount), true);
+
+  Print('TRSChatBox.enterAmount(): The enter amount popup never appeared', TDebug.ERROR);
+end;
+
+(*
+findTextBoxes
+-------------
+
+.. code-block:: pascal
+
+    function TRSChatBox.findTextBoxes(search: integer): TBoxArray;
+
+Returns the TBoxArray of the type/color of text it **searches** for.
+Usefull for accepting trades or adding certain players to ignore. They
+are sorted from top to bottom (old to new). The possible types of text
+to search for can be found at the top of the chatbox.simba file.
+
+.. note::
+
+    - by Thomas
+    - Last Updated: 11 December by Thomas
+
+Example:
+
+.. code-block:: pascal
+
+    trades := chatBox.findTextBoxes(CHATBOX_TRADES);
+    if length(trades) then
+      mouseBox(trades[high(trades)], MOUSE_RIGHT);
+*)
+function TRSChatBox.findTextBoxes(search: integer): TBoxArray;
+var
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+begin
+  case search of
+    CHATBOX_CHALLENGES: FindColorsTolerance(TPA, 470116, chatBox.getChatArea(), 31);
+    CHATBOX_TRADES: FindColorsTolerance(TPA, 11953617, chatBox.getChatArea(), 66);
+    CHATBOX_ERRORS: FindColorsTolerance(TPA, 197608, chatBox.getChatArea(), 24);
+  end;
+
+  if length(TPA) then
+  begin
+    ATPA := TPA.cluster(11, 2);
+    ATPA.filterBetween(0, 40);
+    if length(ATPA) then
+      result := ATPA.getEachBounds();
+  end;
+end;
+
+begin
+  chatBox.__init();
+end;
+
+{$f+}

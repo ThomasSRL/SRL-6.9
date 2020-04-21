@@ -1,0 +1,510 @@
+(*
+Debug
+=====
+
+The Debug file holds any files used for SRL debugging and logging. Debug usage
+guidelines are as follows:
+
+    * Use print('TRSMinimap.getDots()', TDebug.HEADER) to initilize a function header.
+    * Use print('TRSMinimap.getDots(): '+toStr(result), TDebug.FOOTER) to signal the end of the function.
+    * WARNING: If TDebug.HEADER is used, a TDebug.FOOTER MUST be called once before exiting the function.
+    * Use print('Function/procedure name here', TDebug.SUB) for short functions that don't need a header/footer.
+    * HINT: Always include the function's name in a TDebug.SUB to make it easier for developers.
+    * Use print('Message', TDebug.ERROR) for error messages.
+    * Use print('Message', TDebug.WARNING) for warnings.  If a lot of warnings are expected in a
+      row, use print() once, followed by print('Message' TDebug.LOG).
+    * Use print('Message') for informational messages (i.e. "Checking if..." or
+      "Found...").
+    * Use print('Message', TDebug.LOG) for specific information the user won't want to see, but
+      will be useful for scripters to debug (i.e. "Found 20 pixels of the color
+      12345678 with tolerance 15").
+    * Use print('Message', TDebug.HINT) for scripting hints.
+    * Use print('Message', TDebug.FATAL) to terminate the script.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/core/debug.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+type TDebug
+~~~~~~~~~~~
+
+A set of enums used to distinguish between the types of SRL debugging.
+
+Example:
+
+.. code-block:: pascal
+
+    print('Failed to open bank', TDebug.ERROR);
+*)
+{$s+}
+type
+  TDebug = (DEBUG, HEADER, SUB, FOOTER, LOG, HINT, WARNING, ERROR, FATAL);
+{$s-}
+
+{*
+var Internal Debug
+~~~~~~~~~~~~~~~~~~
+
+Internal SRL debug variables:
+    * __logFile: The handle of the SRL log file.
+    * __debugLevel: Used for debug indenting. Makes it easier to read & follow.
+*}
+var
+{$IFNDEF CODEINSIGHT}
+  __logFile = -1;
+  __debugLevel = 1;
+{$ENDIF}
+
+(*
+var External Debug
+~~~~~~~~~~~~~~~~~~
+
+External SRL debug variables that can be set scripts:
+
+    * logPath: string; The path the save the SRL log file. Default path is SRL-6/logs/.
+    * disableSRLLog: boolean; Disables saving debug to a log file.  Default false.
+    * disableSRLDebug: boolean; Disables SRL functions from printing to the debug box.  Default false.
+*)
+var
+  logPath = includePath + 'SRL-6/logs/';
+  disableSRLLog = false;
+  disableSRLDebug = false;
+
+{*
+__openLogFile
+~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    function __openLogFile(): boolean;
+
+Creates the SRL log file.
+
+.. note::
+
+    - by Coh3n
+    - Last Modified: 20 February 2012 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    __openLogFile();
+
+*}
+{$IFNDEF CODEINSIGHT}
+function __openLogFile(): boolean;
+var
+  fileName, start: string;
+  i: integer;
+begin
+  if disableSRLLog then
+    exit();
+
+  if (not directoryExists(logPath)) then
+    forceDirectories(logPath);
+
+  start := replace(theDate(DATE_DAY) + ' at ' + theTime(), ':', '.', [rfReplaceAll]);
+  fileName := logPath + 'SRL log (' + start + ').txt';
+
+  writeLn(Format('SRL: Logfile = %s', [fileName]));
+
+  try
+    i := createFile(fileName);
+
+    if (i > -1) then
+    begin
+      closeFile(i);
+      __logFile := appendFile(fileName);
+      result := (__logFile <> -1);
+    end;
+  except
+    writeLn('Could not open/create log file');
+  end;
+
+  if result then
+    addOnTerminate('__closeLogFile');
+end;
+{$ENDIF}
+
+{*
+__printToLog
+~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure printToLog(s : string);
+
+Writes the string 's' to the SRL log file.
+
+.. note::
+
+    - by Markus
+    - Last Modified: 20 February 2012 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    printToLog('Adding to SRL log file!');
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure __printToLog(s: string);
+begin
+  if disableSRLLog then
+    exit();
+
+  if (__logFile >= 0) then
+    try
+      writeFileString(__logFile, '[' + msToTime(getTimeRunning(), TIME_BARE) + ']: ' + s + #13 + #10);
+    except
+      writeLn('Could not write to log file');
+    end;
+end;
+{$ENDIF}
+
+{*
+__closeLogFile
+~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure __closeLogFile();
+
+Closes the log file.
+
+.. note::
+
+    - by Coh3n
+    - Last Modified: 13 April 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    __closeLogFile();
+
+*}
+{$IFNDEF CODEINSIGHT}
+procedure __closeLogFile();
+begin
+  if disableSRLLog then
+    exit();
+
+  try
+    closeFile(__logFile);
+    disableSRLLog := true; //disable logging so we can debug any things that also get called on terminate
+  except
+    writeLn('Error closing log file');
+  end;
+end;
+{$ENDIF}
+
+(*
+print
+~~~~~
+
+.. code-block:: pascal
+
+    procedure print(txt: string; debugType: TDebug = TDebug.DEBUG);
+
+Prints txt to the debug box if debugType doesn't equal TDebug.LOG.  Will always
+print to the log file unless disableSRLLog is set to true.  Valid arguements
+for debugType:
+
+    * DEBUG (default)
+    * LOG
+    * HINT
+    * WARNING
+    * ERROR
+    * HEADER
+    * FOOTER
+    * SUB
+
+.. note::
+
+    - by Coh3n & masterBB
+    - Last Modified: 24 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    print(TheDate);
+
+*)
+procedure print(txt: string; debugType: TDebug = TDebug.DEBUG);
+var
+  debugMSG: string;
+begin
+  case debugType of
+    TDebug.HINT:
+      txt := 'HINT: ' + txt;
+
+    TDebug.WARNING:
+      txt := 'WARNING: ' + txt;
+
+    TDebug.ERROR:
+      txt := 'ERROR: ' + txt;
+
+    TDebug.FATAL:
+      txt := 'FATAL ERROR: ' + txt;
+
+    TDebug.FOOTER:
+      dec(__debugLevel);
+
+    TDebug.SUB:
+      inc(__debugLevel);
+  end;
+
+  debugMSG := replicate('--', __debugLevel) + ' ' + txt;
+
+  // check for header after the case because the debugMSG needs to
+  // be calculated BEFORE __debugLevel is changed
+  if (debugType = TDebug.HEADER) then
+    inc(__debugLevel);
+
+  // reset the debug level
+  if (debugType = TDebug.SUB) then
+    dec(__debugLevel);
+
+  if (not disableSRLLog) then
+  begin
+    if (__logFile = -1) then // if it hasn't yet been created
+      __openLogFile();
+
+    __printToLog(debugMSG);
+  end;
+
+  // print the fatal error and terminate the script
+  if (debugType = TDebug.FATAL) then
+  begin
+    writeLn(debugMSG);
+    terminateScript();
+  end;
+
+  if disableSRLDebug then
+    exit();
+
+  if (debugType <> TDebug.LOG) then
+    writeLn(debugMSG);
+end;
+
+function print(txt: string; _result: variant; footerTxt: string = ''; debugType: TDebug = TDebug.WARNING): variant; overload;
+begin
+  print(txt, debugType);
+
+  if (footerTxt <> '') then // add a footer
+    print(footerTxt, TDebug.FOOTER);
+
+  exit(_result);
+end;
+
+(*
+printf
+~~~~~~
+
+.. code-block:: pascal
+
+    procedure printf(txt: string; args: TVariantArray; debugType: TDebug = TDebug.DEBUG);
+
+Sister function for print, will use the function "format" to print the string + data.
+
+.. note::
+
+    - by Olly
+    - Last Modified: 22 April 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    printf('hello %d', [50]);
+
+*)
+procedure printf(txt: string; args: TVariantArray; debugType: TDebug = TDebug.DEBUG);
+begin
+  print(format(txt, args), debugType);
+end;
+
+(*
+debugATPA
+~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure debugATPA(atpa: T2DPointArray; bmpName: string);
+
+Draws the points of a T2DPointArray in the debug image window. It will plot each
+element of the array in a different color.
+
+.. note::
+
+    - by Wizzup?
+    - Last Updated: 24 July 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    debugATPA(atpa);
+*)
+procedure debugATPA(const atpa: T2DPointArray);
+var
+  bmp: TMufasaBitmap;
+  copy: T2DPointArray;
+  b: TBox;
+  w, h: integer;
+begin
+  getClientDimensions(w, h);
+
+  b := getTPABounds(mergeATPA(atpa));
+  copy := copyATPA(atpa);
+  offsetATPA(copy, point(0 - b.x1, 0 - b.y1));
+
+  bmp.init(client.getMBitmaps());
+
+  try
+    bmp.copyClientToBitmap(client.getIOManager(), true, b.x1, b.y1, min(b.x2 + 10, w - 1), min(b.y2 + 10, h - 1));
+    bmp.debugATPA(copy);
+    bmp.debug();
+  finally
+    bmp.free();
+  end;
+end;
+
+(*
+debugATPABounds
+~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure debugATPABounds(const ATPA: T2DPointArray);
+
+Draws the bounds of each element of a T2DPointArray in the debug image window.
+
+.. note::
+
+    - by Wizzup?
+    - Last Updated: 24 July 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    debugATPABounds(atpa);
+*)
+procedure debugATPABounds(const ATPA: T2DPointArray);
+var
+  tmb: TMufasaBitmap;
+  b: TBox;
+begin
+  b := getATPABounds(atpa);
+
+  tmb.init(client.getMBitmaps());
+  tmb.setSize(b.x2+1, b.y2+1);
+  tmb.debugATPA(atpa);
+
+  tmb.debug();
+  tmb.free();
+end;
+
+(*
+debugTPA
+~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure debugTPA(tpa: TPointArray; bmpName: string);
+
+Draws a TPointArray on the debug image window.
+
+.. note::
+
+    - by Wizzup?
+    - Last Updated: 24 July 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    debugTPA(tpa);
+*)
+procedure debugTPA(const tpa: TPointArray);
+var
+  tmb: TMufasaBitmap;
+  b: TBox;
+begin
+  b := getTPABounds(tpa);
+
+  tmb.init(client.getMBitmaps());
+  tmb.setSize(b.x2+1, b.y2+1);
+  tmb.debugTPA(tpa);
+
+  tmb.debug();
+  tmb.free();
+end;
+
+(*
+takeScreenshot
+~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure takeScreenshot(fileName: string);
+
+Saves a screenshot 'fileName' to the SRL log directory. It also adds the
+script's run time to avoid replacing images.
+
+.. note::
+
+    - by Harry & Coh3n
+    - Last updated: 9 February, 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    takeScreenshot('example.png');
+*)
+procedure takeScreenshot(fileName: string);
+begin
+  saveScreenshot(logPath + timeRunning() + '_' + fileName);
+  print('Saving screenshot: ' + fileName, TDebug.SUB);
+end;
+
+(*
+debugBitmap
+~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure debugBitmap(bmp: integer);
+
+Draws a bitmap on the debug image window.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 24 July 2014 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    debugTPA(tpa);
+*)
+procedure debugBitmap(bmp: integer);
+var
+  img:TMufasaBitmap;
+begin
+  img := getMufasaBitmap(bmp);
+  img.debug();
+end;
+
+{$f+}
+

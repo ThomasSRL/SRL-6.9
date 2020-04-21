@@ -1,0 +1,17 @@
+{*
+Type
+====
+
+The Type file includes all type editing functions used throughout SRL.
+
+*}
+
+{$include_once tbox.simba}
+{$include_once tboxarrays.simba}
+{$include_once tpoint.simba}
+{$include_once tpointarrays.simba}
+{$include_once extendedarrays.simba}
+{$include_once integerarrays.simba}
+{$include_once stringarrays.simba}
+
+

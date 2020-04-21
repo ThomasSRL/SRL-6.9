@@ -1,0 +1,981 @@
+(*
+Worlds
+======
+
+The worlds file holds functions and procedures that are used in the worlds tab,
+inside the runescape lobby interface.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/lobby/worlds.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the chatBox methods.
+
+*)
+
+{*
+**const Internal**
+
+Internal constants used throughout several functions.
+*}
+const
+  _WORLD_HIGH                  = 139; // the highest number world
+  _WORLD_PATH                  = includePath + 'SRL-6/lib/interfaces/worlds.ini';
+  _WORLD_SORT_BUTTON           = 10328724;  // top of sort buttons
+  _WORLD_SORT_AREA : TBox      = [110, 215, 751, 233]; // box around all sort buttons
+
+(*
+**const Order**
+
+Constants which represent the different world sorting buttons
+
+    * WORLD_ORDER_WORLDS
+    * WORLD_ORDER_PLAYERS
+    * WORLD_ORDER_ACTIVITY
+    * WORLD_ORDER_LOCATION
+    * WORLD_ORDER_LOOT
+    * WORLD_ORDER_TYPE
+    * WORLD_ORDER_PING
+*)
+const
+  WORLD_ORDER_WORLDS   = 0;
+  WORLD_ORDER_PLAYERS  = 1;
+  WORLD_ORDER_ACTIVITY = 2;
+  WORLD_ORDER_LOCATION = WORLD_ORDER_ACTIVITY;
+  WORLD_ORDER_LOOT     = 3;
+  WORLD_ORDER_TYPE     = 4;
+  WORLD_ORDER_PING     = 5;
+
+{*
+**type __TRSWorld**
+
+An internal type used to store information about individual worlds.
+*}
+type
+  __TRSWorld = record
+    world: integer;
+    members: boolean;
+    avoid: boolean;
+  end;
+
+(*
+**type TRSLobbyWorlds**
+
+.. code-block:: pascal
+
+    type
+      TRSLobbyWorlds = type TRSInterface;
+
+A type that stores the worlds interface properties.
+
+*)
+type
+  TRSLobbyWorlds = record(TRSInterface)
+    lobbyID: integer;
+    worlds: array of __TRSWorld;
+    worldNumArea, worldFavArea: TBox;
+  end;
+
+(*
+**var lobbyWorlds**
+
+.. code-block:: pascal
+
+    var
+      lobbyWorlds: TRSLobbyWorlds;
+
+A variable through which scripters can access the TRSLobbyWorlds type methods.
+
+*)
+var
+  lobbyWorlds: TRSLobbyWorlds;
+
+{*
+**var Internal**
+
+Internal worlds interface variables
+*}
+var
+  __worldsOrdered: boolean; // set to true if the worlds get ordered in the sorting functions
+
+(*
+TRSLobbyWorlds methods
+~~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **lobbyWorlds** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if lobbyWorlds.isOpen() then
+      writeln('It''s open');
+*)
+
+
+{*
+__loadFromINI
+-------------
+
+.. code-block:: pascal
+
+    procedure TRSLobbyWorlds.__loadFromINI();
+
+Loads the world information from an INI file.
+
+.. note::
+
+    - by Narcle, Nava2, and Coh3n
+    - Last Updated: 09 October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    self.__loadFromINI();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSLobbyWorlds.__loadFromINI();
+var
+  i, c: integer;
+begin
+  setLength(self.worlds, _WORLD_HIGH + 1);
+
+  for i := 0 to high(self.worlds) do
+    if (readINI(toStr(i), 'world', _WORLD_PATH) <> '') then // to make sure the world exists
+    begin
+      self.worlds[c].members := strToBool(readINI(toStr(i), 'members', _WORLD_PATH));
+      self.worlds[c].avoid := strToBool(readINI(toStr(i), 'avoid', _WORLD_PATH));
+      self.worlds[c].world := strToIntDef(readINI(toStr(i), 'world', _WORLD_PATH), -1);
+      inc(c);
+    end;
+
+  setLength(self.worlds, c);
+end;
+{$ENDIF}
+
+{*
+TRSLobbyWorlds.__init
+~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pascal
+
+    procedure TRSLobbyWorlds.__init();
+
+Initiates the TRSLobbyWorlds.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 26 June 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    lobbyWorlds.__init();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSLobbyWorlds.__init();
+begin
+  with self do
+  begin
+    name := 'RS Lobby Tab: Worlds';
+    ID := ID_INTERFACE_LOBBY_WORLDS;
+    parentID := ID_INTERFACE_LOBBY;
+    isStatic := true;
+    lobbyID := LOBBY_WORLDS;
+    SetBounds(lobby.getBounds());
+    __loadFromINI();
+    worldNumArea := [x1 + 35, y1 + 125, x1 + 100, y2 - 62];
+    worldFavArea := [x1 + 538, y1 + 429, x2 - 42, y2 - 18];
+  end;
+end;
+{$ENDIF}
+
+{*
+_getWorldIndex    // ~TM 10/aug/15 check if this is actually used anywhere
+--------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds._getWorldIndex(wo: integer): integer;
+
+Retruns the array index the world 'wo' is in.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 24 July 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    b := lobbyWorlds.worlds[lobbyWorlds._getWorldIndex(12)].member;
+*}
+function TRSLobbyWorlds._getWorldIndex(wo: integer): integer;
+begin
+  for result := 0 to high(self.worlds) do
+    if (self.worlds[result].world = wo) then
+      break;
+end;
+
+(*
+isOpen
+------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.isOpen(): boolean;
+
+Returns true if the worlds interface is open.
+
+.. note::
+
+    - by Icefire908 & Coh3n
+    - Last Updated: 23 July 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if lobbyWorlds.isOpen() then
+      lobbyWorlds.selectWorld(115);
+*)
+function TRSLobbyWorlds.isOpen(): boolean;
+begin
+  result := (lobby.getCurrentTab() = self.lobbyID);
+end;
+
+(*
+open
+----
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.open(): boolean;
+
+Returns true if the worlds interface is sucessfully opened. Waits a maximum of
+10 seconds after the tab is clicked for the world list to load.
+
+.. note::
+
+    - by Bionicle1800 & Coh3n
+    - Last Updated: 8 February 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if lobbyWorlds.open() then
+      writeLn('We opened the worlds tab in the lobby!);
+*)
+function TRSLobbyWorlds.open(): boolean;
+var
+  cols: array [0..1] of integer := [635358, 14737374]; // Yellow/White
+  i, count: integer;
+  t : LongWord;
+begin
+  result := lobby.openTab(self.lobbyID);
+
+  if (not self.isOpen()) then
+    exit(false)
+  else begin  // needed to compensate for lag
+    t := (getSystemTime() + randomRange(7500, 11000));
+
+    while (getSystemTime() < t) do
+    begin
+      for i := 0 to high(cols) do
+        count += countColorTolerance(cols[i], self.worldNumArea, 63);
+
+      if (count > 80) then
+        exit(true);
+
+      wait(50);
+    end;
+
+    print('TRSLobbyWorlds.open(): Worlds list taking too long to load', TDebug.SUB);
+  end;
+end;
+
+{*
+_isWorldValid
+-------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds._isWorldValid(wo: integer): boolean;
+
+Returns true if the world **wo** is valid world.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 26 June 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (not lobbyWorlds._isWorldValid(115)) then
+      exit(false);
+*}
+function TRSLobbyWorlds._isWorldValid(wo: integer): boolean;
+var
+  i: integer;
+begin
+  for i := 0 to high(self.worlds) do
+    if (self.worlds[i].world = wo) then
+      exit(true);
+
+  print('TRSLobbyWorlds._isWorldValid(): '+toStr(wo)+' is an invalid world', TDebug.ERROR);
+end;
+
+(*
+getCurrentWorld
+---------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.getCurrentWorld(): integer;
+
+Returns the currently selected world.
+
+.. note::
+
+    - by Home & Coh3n
+    - Last Updated: 8 August 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    writeLn(lobbyWorlds.getCurrentWorld()));
+*)
+function TRSLobbyWorlds.getCurrentWorld(): Integer;
+var
+  TPA: TPointArray;
+  Box: TBox;
+begin
+  Result := -1;
+  if (not Self.isOpen()) then
+    Exit();
+
+  if (FindColors(TPA, 3088905, Self.getBounds())) then
+  begin
+    Box := GetTPABounds(TPA);
+    Result := StrToIntDef(ExtractFromStr(Tesseract_GetText(Box.x1, Box.y1, Box.x2, Box.y2, TESS_FILTER_SMALL_CHARS_2), Numbers), -1);
+  end;
+
+  print('TRSLobbyWorlds.getCurrentWorld(): Current world is '+toStr(result), TDebug.SUB);
+end;
+
+(*
+sort
+----
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.sort(orderBy: integer; descending: boolean): boolean;
+
+Sorts the worlds list by the specified order type. The **orderBy** should be one
+of the constants at the top of this page. Setting *descending* to true will order
+the worlds with the largest at the top.
+
+.. note::
+
+    - by Naum & Coh3n
+    - Last Updated: 8 August 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    lobbyWorlds.sort(WORLD_ORDER_PLAYERS, true); // sorts the worlds starting with lowest at the top
+*)
+function TRSLobbyWorlds.sort(orderBy: integer; descending: boolean): boolean;
+var
+  ATPA: T2DPointArray;
+  TPA: TPointArray;
+  TB: TBox;
+  i: Integer;
+begin
+  print('TRSLobbyWorlds.sort()', TDebug.HEADER);
+
+  if (not self.isOpen()) then
+    exit(false);
+
+  if findColors(TPA, _WORLD_SORT_BUTTON, _WORLD_SORT_AREA) then
+  begin
+    print('Found _WORLD_SORT_BUTTON');
+
+    ATPA := TPA.cluster(2);
+
+    if (length(ATPA) < 1) then
+    begin
+      print('Didn''t find enough of _WORLD_SORT_BUTTON', TDebug.ERROR);
+      print('TRSLobbyWorlds.sort(): '+toStr(result), TDebug.FOOTER);
+      exit();
+    end;
+
+    sortATPAFromFirstPoint(ATPA, point(self.x, self.y));
+
+    TB := getTPABounds(ATPA[orderBy]);
+    TB.edit(-1, 0, 1, 14);
+
+    for i := 0 to 2 do
+    begin
+      if (getColor(TB.getMiddle()) = 3427397) then
+        if descending then
+        begin
+          result := true;
+          break;
+        end;
+
+      if (getColor(TB.getMiddle()) = 3032127) then
+        if not descending then
+        begin
+          result := true;
+          break;
+        end;
+
+      mouseBox(TB, MOUSE_LEFT);
+      wait(randomRange(1500, 2000));
+    end;
+  end else
+    print('Failed to find _WORLD_SORT_BUTTON', TDebug.ERROR);
+
+  print('TRSLobbyWorlds.sort(): '+toStr(result), TDebug.FOOTER);
+
+end;
+
+{*
+_getFavoriteCount
+-----------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds._getFavoriteCount(): integer;
+
+Determines the number of existing favorite worlds. Theis number affects the
+position of the scrollbar (and thus scrolling to worlds).
+
+.. note::
+
+    - by Clarity
+    - Last Updated: 9 October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    lobbyWorlds._getFavoriteCount();
+*}
+function TRSLobbyWorlds._getFavoriteCount(): integer;
+var
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+begin
+  result := 0;
+  if findColorsTolerance(TPA, 16438611, self.worldFavArea, 40) then
+  begin
+    ATPA.filterBetween(0, 100);
+    ATPA := splitTPA(tpa, 1);
+    if (length(ATPA) > 0) then
+      result := length(ATPA);
+  end;
+end;
+
+{*
+_findWorldNumber
+----------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds._findWorldNumber(var res: TPoint; wo: integer): boolean;
+
+Returns true if it sucessfully finds the text of the world **wo** . If successful,
+it will pass the coordinates in **res**
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 9th August 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      p: TPoint;
+    begin
+      if lobbyWorlds._findWorldNumber(p, 115) then
+        mouse(p.rand(5), MOUSE_LEFT);
+    end;
+*}
+function TRSLobbyWorlds._findWorldNumber(var res: TPoint; wo: integer): boolean;
+const
+  Colors = [827845, 13093322];
+  fFilter: TTesseractFilter = [4, 4, [False, 20, TM_Mean]];
+  mFilter: TTesseractFilter = [4, 4, [False, 45, TM_Mean]];
+type
+  TWorldBox = record
+    Bounds: TBox;
+    Members: Boolean;
+ end;
+var
+  WorldBoxes: array of TWorldBox;
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+  i, j, n: Integer;
+  b: TBox;
+begin
+
+  for i := 0 to High(Colors) do
+    if (FindColorsTolerance(TPA, Colors[i], self.worldNumArea, 100, ColorSetting(1))) then
+    begin
+      ATPA := ClusterTPAEx(TPA, 10, 4);
+
+      for j := 0 to High(ATPA) do
+      begin
+        b := GetTPABounds(ATPA[j]);
+
+        if (inRange(b.getWidth(), 2, 25)) then
+          if (b.getHeight() > 7) then
+          begin
+            b := intToBox(b.X1 - 3, b.Y1 - 5, b.X2 + 5, b.Y2 + 5);
+            WorldBoxes := WorldBoxes + TWorldBox([b, Boolean(i = 0)]);
+          end;
+      end;
+    end;
+
+  for i := 0 to High(WorldBoxes) do
+  begin
+    n := -1;
+    if (WorldBoxes[i].Members) then
+      n := StrToIntDef(Trim(Tesseract_GetText(WorldBoxes[i].Bounds, fFilter, TESS_WHITELIST_NUMBERS)), -1)
+    else
+      n := StrToIntDef(Trim(Tesseract_GetText(WorldBoxes[i].Bounds, mFilter, TESS_WHITELIST_NUMBERS)), -1);
+    if (n = wo) then
+      begin
+        res := MiddleBox(WorldBoxes[i].Bounds);
+        Exit(True);
+      end;
+  end;
+end;
+
+{*
+_scrollToWorld
+--------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds._scrollToWorld(var res: TPoint; wo: integer): boolean;
+
+Returns true if it siccessfully scrolls and finds the world **wo** . If found,
+it will pass the coordinates in **res**
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 9th October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      p: TPoint;
+    begin
+      if lobbyWorlds._scrollToWorld(p, 115) then
+        mouse(p, MOUSE_LEFT);
+    end;
+*}
+function TRSLobbyWorlds._scrollToWorld(var res: TPoint; wo: integer): boolean;
+const
+  __COLOR_SCROLL_BAR = 3455991;
+var
+  favs, modY2: integer;
+  t: LongWord;
+  down: boolean;
+  p: TPoint;
+begin
+  if (not self.isOpen()) then
+    exit(false);
+
+  p := self.getCenterPoint().rand(randomRange(-200, 200), randomRange(-50, 50));
+  t := (getSystemTime() + 20000);
+
+  favs := self._getFavoriteCount();
+
+  case favs of
+    0: modY2 := 0;
+    1: modY2 := 20;
+    2: modY2 := 35;
+    3: modY2 := 54;
+  end;
+
+  repeat
+    if (self._findWorldNumber(res, wo)) then
+      break;
+
+    if (getColor(self.x2 - 25, self.y2 - 308 + modY2) = __COLOR_SCROLL_BAR) then
+      down := true;
+
+    if (getColor(self.x2 - 25, self.y2 - 79) = __COLOR_SCROLL_BAR) then
+      down := false;
+
+    mouseScroll(p, 4 + random(3), down);
+    wait(700 + random(250));
+
+  until(getSystemTime() > t);
+
+  Wait(Random(200, 300));
+  Result := self._findWorldNumber(res, wo);
+end;
+
+(*
+selectWorld
+-----------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.selectWorld(wo: integer): boolean;
+
+Returns true if it selects the world **wo** . It will open the worlds interface
+and scroll to the world if needed.
+
+.. note::
+
+    - by Narcle, ZephyrsFury, Ashaman88, and Coh3n
+    - Last Updated: 9th October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+      if players[currentPlayer].loginToLobby() then
+        lobbyWorlds.selectWorld(115);
+*)
+function TRSLobbyWorlds.selectWorld(wo: integer): boolean;
+var
+  p: TPoint;
+  tpa: TPointArray;
+  atpa: T2DPointArray;
+begin
+  result := false;
+
+  // make sure the worlds screen is open
+  if (not self.isOpen()) then
+    if (not self.open()) then
+      exit(false);
+
+  // make sure the world is valid
+  if (not self._isWorldValid(wo)) then
+    exit(false);
+
+  print('TRSLobbyWorlds.selectWorld()', TDebug.HEADER);
+
+  // check to see if we're already on the right world
+  if (self.getCurrentWorld() = wo) then
+  begin
+    print('Already on world '+toStr(wo));
+    result := true;
+  end;
+
+  if (not result) then
+  begin
+    p := [-1, -1];
+    if (self._findWorldNumber(p, wo)) then // check to see if the worlds already visible (or if it's favorited)
+      print('Found world '+toStr(wo))
+    else
+      if (self._scrollToWorld(p, wo)) then
+        print('Scrolled to and found world '+toStr(wo));
+
+    if (not p.isInvalid()) then
+    begin
+      print('Selected world '+toStr(wo));
+      mouse(p.rand(-6, 6), MOUSE_LEFT);
+      result := true;
+    end;
+  end;
+
+  print('TRSLobbyWorlds.selectWorld(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+selectRandomWorld
+-----------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.selectRandomWorld(members: boolean; standardAvoid: boolean = true; personalAvoid: TIntegerArray = []): boolean;
+
+Returns true if it successfully selects a random world.
+
+    * **members** : Select a members world?
+    * **statdardAvoid** : Avoid the worlds listed below *(default = true)*
+    * **personalAvoid** : A custom array of worlds to avoid. Can be used separately or in addition to the standard avoid worlds.
+
+The default avoid worlds are:
+
+    * World 18 - Legacy Only
+    * World 30 - Skill Total (2000)
+    * World 33 - Legacy Only
+    * World 48 - Skill Total (2400)
+    * World 52 - VIP Server
+    * World 57 - Legacy Only
+    * World 86 - Skill Total (1500)
+    * World 96 - Quick Chat
+    * World 97 - Legacy Only
+    * World 114 - Skill Total (1500)
+    * World 115 - Legacy Only
+    * World 120 - Legacy Only
+    * World 136 - Legacy Only
+    * World 137 - Legacy Only
+
+.. note::
+
+    - by Narcle, Mixter, and Coh3n
+    - Last Updated: 9 October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    //To select a random P2P world
+    lobbyWorlds.selectRandomWorld(players[currentPlayer].isMember);
+
+    //To select a random P2P world, also selecting from "avoid" worlds
+    lobbyWorlds.selectRandomWorld(players[currentPlayer].isMember, false);
+
+    //To select a random P2P world, avoiding worlds 99 and 100 in addition to the standard avoid worlds
+    lobbyWorlds.selectRandomWorld(players[currentPlayer].isMember, true, [99, 100]);
+*)
+function TRSLobbyWorlds.selectRandomWorld(members: boolean; standardAvoid: boolean = true; personalAvoid: TIntegerArray = []): boolean;
+var
+  i, l, wo: integer;
+  wArray: TIntegerArray;
+begin
+  setLength(wArray, length(self.worlds));
+
+  for i := 0 to high(self.worlds) do
+  begin
+    if (not self.worlds[i].members = not members) and ((self.worlds[i].avoid) = (not standardAvoid)) then
+    begin
+      if (length(personalAvoid) > 0) then
+      begin
+        if (not inIntArray(personalAvoid, self.worlds[i].world)) then
+        begin
+          wArray[l] := self.worlds[i].world;
+          inc(l);
+        end;
+      end else
+      begin
+        wArray[l] := self.worlds[i].world;
+        inc(l);
+      end;
+    end;
+  end;
+
+  if (l <= 0) then
+  begin
+    print('TRSLobbyWorlds.selectRandomWorld(): Failed to initiate wArray', TDebug.ERROR);
+    exit();
+  end;
+
+  setLength(wArray, l);
+  wo := random(l);
+
+  print('TRSLobbyWorlds.selectRandomWorld(): Random world is '+toStr(wArray[wo]), TDebug.SUB);
+
+  result := self.selectWorld(wArray[wo]);
+end;
+
+(*
+addFavoriteWorlds
+-----------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.addFavoriteWorlds(wArray: TIntegerArray): boolean;
+
+Returns true if it siccessfully adds worlds **wArray** to your list of favorites.
+This does not clear existing favourite worlds first.
+
+.. note::
+
+    - by Clarity
+    - Last Updated: 9 October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    lobbyWorlds.addFavoriteWorlds([3, 4]);
+*)
+function TRSLobbyWorlds.addFavoriteWorlds(wArray: TIntegerArray): boolean;
+var
+  i, remaining: integer;
+  p: TPoint;
+begin
+
+  result := false;
+  if (length(wArray) > 3) then
+  begin
+    print('TRSLobbyWorlds.addFavoriteWorlds(): You cannot add more than three worlds.', TDebug.ERROR);
+    exit();
+  end;
+
+  if (not self.isOpen()) then
+    if (not self.open()) then
+      exit(false);
+
+  for i := 0 to high(wArray) do
+  begin
+    if (not self._isWorldValid(wArray[i])) then
+      exit(false);
+  end;
+
+  if (self._getFavoriteCount() = 3) then
+  begin
+    print('TRSLobbyWorlds.addFavoriteWorlds(): You already have the maximum amount of three favorited worlds.', TDebug.ERROR);
+    exit();
+  end;
+
+  print('TRSLobbyWorlds.addFavoriteWorlds()', TDebug.HEADER);
+
+  remaining := length(wArray);
+
+  for i := 0 to high(wArray) do
+  begin
+    p := [-1, -1];
+    if (self._findWorldNumber(p, wArray[i])) then
+      print('Found world '+toStr(wArray[i]))
+    else
+      if (self._scrollToWorld(p, wArray[i])) then
+        print('Scrolled to and found world '+toStr(wArray[i]));
+
+    if (not p.isInvalid()) then
+    begin
+      print('Added world '+toStr(wArray[i])+' to the favorites list');
+      p.x := (p.x - 18);
+      mouse(p.rand(-6, 6), MOUSE_LEFT);
+      remaining := (remaining - 1);
+    end;
+    if (self._getFavoriteCount() = 3) and (remaining <> 0) then
+    begin
+      print('TRSLobbyWorlds.addFavoriteWorlds(): Partial success.  Failed to find all requested worlds.', TDebug.ERROR);
+      exit();
+    end;
+    wait(150 + random(100));
+    self._getFavoriteCount();
+  end;
+
+  result := true;
+  print('TRSLobbyWorlds.addFavoriteWorlds(): '+toStr(result), TDebug.FOOTER);
+
+end;
+
+(*
+removeFavoriteWorlds
+--------------------
+
+.. code-block:: pascal
+
+    function TRSLobbyWorlds.removeFavoriteWorlds(wArray: TIntegerArray): boolean;
+
+Returns true if it siccessfully removes the **wArray** worlds wfrom your list of
+favorites.
+
+.. note::
+
+    - by Clarity
+    - Last Updated: 9 October 2014 by Clarity
+
+Example:
+
+.. code-block:: pascal
+
+    lobbyWorlds.removeFavoriteWorlds([3, 4]);
+*)
+function TRSLobbyWorlds.removeFavoriteWorlds(wArray: TIntegerArray): boolean;
+var
+  i, remaining: integer;
+  p: TPoint;
+begin
+
+  result := false;
+  if (length(wArray) > 3) then
+  begin
+    print('TRSLobbyWorlds.removeFavoriteWorlds(): You cannot remove more than three worlds.', TDebug.ERROR);
+    exit();
+  end;
+
+  for i := 0 to high(wArray) do
+  begin
+    if (not self._isWorldValid(wArray[i])) then
+      exit(false);
+    if not lobby.quickSelectWorld(wArray[i], false) then
+    begin
+      print('TRSLobbyWorlds.removeFavoriteWorlds(): This world is already not a favorite world.', TDebug.FOOTER);
+      exit(true);
+    end;
+  end;
+
+  if (not self.isOpen()) then
+    if (not self.open()) then
+      exit(false);
+
+  if (self._getFavoriteCount() = 0) then
+  begin
+    print('TRSLobbyWorlds.removeFavoriteWorlds(): There are no existing favorite worlds to remove.', TDebug.ERROR);
+    exit();
+  end;
+
+  print('TRSLobbyWorlds.removeFavoriteWorlds()', TDebug.HEADER);
+
+  remaining := length(wArray);
+
+  for i := 0 to high(wArray) do
+  begin
+    p := [-1, -1];
+    if (self._findWorldNumber(p, wArray[i])) then
+      print('Found world '+toStr(wArray[i]))
+    else
+      if (self._scrollToWorld(p, wArray[i])) then
+        print('Scrolled to and found world '+toStr(wArray[i]));
+
+    if (not p.isInvalid()) then
+    begin
+      print('Removed world '+toStr(wArray[i])+' from the favorites list');
+      p.x := (p.x - 18);
+      mouse(p.rand(-6, 6), MOUSE_LEFT);
+      remaining := (remaining - 1);
+    end;
+    if (self._getFavoriteCount() = 0) and (remaining <> 0) then
+    begin
+      print('TRSLobbyWorlds.removeFavoriteWorlds(): Partial success.  Failed to find all requested worlds.', TDebug.ERROR);
+      exit();
+    end;
+    wait(150 + random(100));
+    self._getFavoriteCount();
+  end;
+
+  result := true;
+  print('TRSLobbyWorlds.removeFavoriteWorlds(): '+toStr(result), TDebug.FOOTER);
+
+end;
+
+begin
+  lobbyWorlds.__init();
+end;
+
+{$f+}

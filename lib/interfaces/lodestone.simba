@@ -1,0 +1,513 @@
+(*
+Lodestone Screen
+================
+
+The lodestone file holds functions and procedures that are used in the runescape lodestone screen.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/lodestone.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the lodestoneScreen methods.
+
+**const Locations**
+
+All possible locations to teleport on the lodestone network:
+
+    * LOCATION_LUNAR_ISLE
+    * LOCATION_EAGLES_PEAK
+    * LOCATION_TIRANNWN
+    * LOCATION_FREMENNIK
+    * LOCATION_SEERS_VILLAGE
+    * LOCATION_ARDOUGNE
+    * LOCATION_YANILLE
+    * LOCATION_OOGLOG
+    * LOCATION_BURTHORPE
+    * LOCATION_CATHERBY
+    * LOCATION_TAVERLEY
+    * LOCATION_KARAMJA
+    * LOCATION_WILDERNESS
+    * LOCATION_EDGEVILLE
+    * LOCATION_FALADOR
+    * LOCATION_PORT_SARIM
+    * LOCATION_VARROCK
+    * LOCATION_DRAYNOR_VILLAGE
+    * LOCATION_LUMBRIDGE
+    * LOCATION_BANDIT_CAMP
+    * LOCATION_AL_KHARID
+    * LOCATION_CANIFIS
+    * LOCATION_ASHDALE
+    * LOCATION_PRIFDDINAS
+    * LOCATION_PREVIOUS
+
+*)
+const
+  LOCATION_LUNAR_ISLE      = 0;
+  LOCATION_EAGLES_PEAK     = 1;
+  LOCATION_TIRANNWN        = 2;
+  LOCATION_FREMENNIK       = 3;
+  LOCATION_SEERS_VILLAGE   = 4;
+  LOCATION_ARDOUGNE        = 5;
+  LOCATION_YANILLE         = 6;
+  LOCATION_OOGLOG          = 7;
+  LOCATION_BURTHORPE       = 8;
+  LOCATION_CATHERBY        = 9;
+  LOCATION_TAVERLEY        = 10;
+  LOCATION_TRAVERLEY       = 10;
+  LOCATION_KARAMJA         = 11;
+  LOCATION_WILDERNESS      = 12;
+  LOCATION_EDGEVILLE       = 13;
+  LOCATION_FALADOR         = 14;
+  LOCATION_PORT_SARIM      = 15;
+  LOCATION_VARROCK         = 16;
+  LOCATION_DRAYNOR_VILLAGE = 17;
+  LOCATION_LUMBRIDGE       = 18;
+  LOCATION_BANDIT_CAMP     = 19;
+  LOCATION_AL_KHARID       = 20;
+  LOCATION_CANIFIS         = 21;
+  LOCATION_ASHDALE         = 22;
+  LOCATION_PRIFDDINAS      = 23;
+  LOCATION_PREVIOUS        = 1337;
+
+(*
+**type TRSLodestoneScreen**
+
+.. code-block:: pascal
+
+    type
+      TRSLodestoneScreen = type TRSInterface;
+
+A type that stores the lodestone interface properties.
+
+*)
+type
+  TRSLodestoneScreen = type TRSInterface;
+
+(*
+**var lodestoneScreen**
+
+.. code-block:: pascal
+
+    var
+      lodestoneScreen: TRSLodestoneScreen;
+
+A variable through which scripters can access the TRSLodestoneScreen type methods.
+
+*)
+var
+  lodestoneScreen: TRSLodestoneScreen;
+
+(*
+TRSLodestoneScreen methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **lodestoneScreen** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen.isOpen() then
+      writeln('Lodestone screen is open!');
+*)
+
+{*
+__init
+------
+
+.. code-block:: pascal
+
+    procedure TRSLodestoneScreen.__init();
+
+Initializes the TRSLodestoneScreen.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    lodestoneScreen.__init();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSLodestoneScreen.__init();
+begin
+  with (self) do
+  begin
+    name := 'RS Production Screen';
+    ID := ID_INTERFACE_LODESTONE;
+    parentID := -1;
+    isStatic := false;
+  end;
+end;
+{$ENDIF}
+
+{*
+__find
+------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen.__find(): boolean;
+
+Returns true if the lodestone interface is detected and its bounds are set.
+Scripters should use lodestoneScreen.isOpen() below.
+
+.. note::
+
+    - by Ashaman88
+    - Last Updated: 5 August 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen.__find() then
+      writeln('The lodestone screen is open, and the bounds are set!');
+*}
+{$IFNDEF CODEINSIGHT}
+function TRSLodestoneScreen.__find(): boolean;
+const
+  RED_COLOR = [1448256, 26]; // [Col, Tol] background of 'LODESTONE NETWORK'
+var
+  i: Integer;
+  TPA: TPointArray;
+  ATPA: T2DPointArray;
+  b: TBox;
+begin
+  findColorsTolerance(TPA, RED_COLOR[0], getClientBounds(), RED_COLOR[1]);
+
+  if length(TPA) < 10 then
+  begin
+    print('TRSLodestoneScreen.__find(): Didn''t find enough RED_COLOR', TDebug.WARNING);
+    exit(false);
+  end;
+
+  ATPA := TPA.cluster(2);
+  ATPA.sortBySize(true);
+
+  for i := 0 to high(ATPA) do
+  begin
+    b := ATPA[i].getBounds();
+
+    if inRange(b.getWidth(), 190, 210) and inRange(b.getHeight(), 20, 40) then
+      if (pos('LODE', upperCase(tesseract_GetText(b, TESS_FILTER_SMALL_CHARS))) > 0) then
+      begin
+        self.setBounds([b.x1 - 3, b.y1 - 5, b.x2 + 307, b.y2 + 300]);
+        exit(true);
+      end;
+  end;
+end;
+{$ENDIF}
+
+(*
+isOpen
+------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen.isOpen(waitTime: integer = 0): boolean;
+
+Returns true if the lodestone interface is open. The optional **waitTime** parameter
+*(default = 0)* is the maximum time (in milliseconds) it will keep looking.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen.isOpen(2000) then
+      writeln('Lodestone screen is open!');
+*)
+function TRSLodestoneScreen.isOpen(waitTime: integer = 0): boolean;
+var
+  cts: integer;
+  t : LongWord;
+begin
+  t := (getSystemTime() + waitTime);
+
+  cts := getToleranceSpeed();
+  setColorToleranceSpeed(1);
+
+  repeat
+    result := self.__find();
+    wait(20 + random(20));
+  until (getSystemTime() >= t) or (result);
+
+  setColorToleranceSpeed(cts);
+end;
+
+(*
+close
+-----
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen.close(): boolean;
+
+Returns true if the lodestone screen is successfully closed.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen.close() then
+      writeln('The lodestone screen has been closed.');
+*)
+function TRSLodestoneScreen.close(): boolean;
+var
+  t: longWord;
+begin
+  result := false;
+  t := (getSystemTime() + randomRange(6000, 8000));
+
+  if (self.isOpen()) then
+  begin
+    mouseCircle(self.x2 - 4, self.y1 + 8, 4, MOUSE_LEFT);
+
+    while (t > getSystemTime()) do
+    begin
+      if (not self.isOpen()) then
+      begin
+        result := true;
+        break;
+      end;
+
+      wait(50 + random(50));
+    end;
+  end else
+    result := true;
+
+  if (result) then
+    print('TRSLodestoneScreen.close(): Closed lodestone screen', TDebug.SUB)
+  else
+    print('TRSLodestoneScreen.close(): Failed to close lodestone screen', TDebug.WARNING);
+end;
+
+(*
+_isLocationVaild
+----------------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen._isLocationVaild(location: integer): boolean;
+
+Returns true if the lodestone **location** is one of the *Location
+constants* at the top of this page.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen._isLocationVaild(LOCATION_VARROCK) then
+      writeln('LOCATION_VARROCK is a valid lodestone');
+*)
+function TRSLodestoneScreen._isLocationVaild(location: integer): boolean;
+begin
+  result := inRange(location, LOCATION_LUNAR_ISLE, LOCATION_PRIFDDINAS);
+
+  if (not result) then
+    print('TRSLodestoneScreen._isLocationVaild(): Location isn''t vaild!');
+end;
+
+(*
+_getTeleportBox
+---------------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen._getTeleportBox(location: integer): TBox;
+
+Returns a TBox of the lodestone button **location** .
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    b := lodestoneScreen._getTeleportBox(LOCATION_CANIFIS);
+*)
+function TRSLodestoneScreen._getTeleportBox(location: integer): TBox;
+const
+  pnts: TPointArray = [[26, 48], [94, 117], [71, 194], [183, 53], [165, 100], [156, 144], [147, 209], [139, 262], [239, 87], [198, 130], [230, 124], [198, 198], [298, 60], [281, 99], [261, 146], [262, 188], [336, 131], [299, 162], [310, 199], [310, 243], [351, 193], [393, 105], [84, 298], [51, 139]];
+var
+  p: TPoint;
+begin
+  result := [-1, -1, -1, -1];
+
+  if (self._isLocationVaild(location)) then
+  begin
+    p := pnts[location];
+    p.offset([self.x1, self.y1]);
+
+    result := [p.x -8, p.y -8, p.x +8, p.y +8];
+  end;
+end;
+
+(*
+_isLocked
+---------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen._isLocked(location: integer): boolean;
+
+Returns true if the lodestone **location** is avaliable to the player.
+
+.. note::
+
+    - by The Mayor
+    - Last Updated: 16 December 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen._isLocked(LOCATION_ASHDALE) then
+      writeln('Either you are F2P or you need to activate the Ashdale loadstone!');
+*)
+function TRSLodestoneScreen._isLocked(location: integer): boolean;
+var
+  x, y, i: integer;
+  b: TBox;
+  DTMs: array[0..1] of integer;
+begin
+  DTMs := [DTMFromString('mbQAAAHicY2VgYKiA4mogrofiQEYGBm8gdoXSIP6kHccZppy+zbDu1lMwDeLzA9WiY0YsGAwA0uoPRA=='),
+           DTMFromString('mWAAAAHicY2FgYHgNxC+B+B0QvwHiZUA8B4oXAfFvIP7/3Ifh/2c/MJsfDTOiYRAAAOaoDNs=')];
+
+  b := self._getTeleportBox(location);
+  b.expand(5);
+
+  for i := 0 to high(DTMs) do
+    if findDTM(DTMs[i], x, y, b) then
+      result := true;
+      
+  freeDTMs(DTMs);
+
+  if result then
+    print('TRSLodestoneScreen._isLocked(): lodestone ' + toStr(location) + ' is not activated', TDebug.ERROR)
+end;
+
+(*
+teleportTo
+----------
+
+.. code-block:: pascal
+
+    function TRSLodestoneScreen.teleportTo(location: integer): boolean;
+
+Will teleport to **location**. Use the *Location constants* at the top of this page.
+Will wait untill animation is done if the **waitAfter** boolean is set to *true*.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 16 December 2014 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    if lodestoneScreen.teleportTo(LOCATION_LUMBRIDGE) then
+      writeln('We just teleported to Lumbridge');
+*)
+function TRSLodestoneScreen.teleportTo(location: integer; waitAfter: boolean = false): boolean;
+var
+  b: TBox;
+  options: TOptionArray;
+  t: TCountDown;
+begin
+  result := false;
+  t.setTime(randomRange(21000, 27000));
+  if (not self.isOpen()) then
+  begin
+    mouseCircle(minimap.button[MM_BUTTON_LODESTONE].center.x, minimap.button[MM_BUTTON_LODESTONE].center.y,
+                minimap.button[MM_BUTTON_LODESTONE].radius, MOUSE_MOVE);
+
+    if (location = LOCATION_PREVIOUS) then
+    begin
+      fastclick(MOUSE_RIGHT);
+      Wait(Random(200, 300));
+
+      Options := chooseOption.getOptions();
+      Result := Length(Options) = 3;
+      if (Result) then
+      begin
+        mouseBox(Options[1].bounds, MOUSE_LEFT);
+        print('TRSLodestoneScreen.teleportTo(): Succesfully teleported to previous destination', TDebug.SUB);
+
+        if waitAfter then
+        repeat
+          wait(randomRange(500, 2000));
+          if (SRL_Events[EVENT_ANTIBAN] <> nil) then
+            SRL_Events[EVENT_ANTIBAN]();
+        until t.isFinished();
+
+      end else
+        print('TRSLodestoneScreen.teleportTo(): Failed teleport to previous destination (ChooseOption must have failed)', TDebug.SUB);
+
+      exit();
+    end;
+  end;
+
+  if (not self.isOpen()) then
+    fastClick(MOUSE_LEFT);
+
+  if (self.isOpen(4000 + random(1500))) then
+  begin
+    if not self._isLocked(location) then
+    begin
+      b := self._getTeleportBox(location);
+
+      if (b.x1 <> -1) then
+      begin
+        mouseBox(b, MOUSE_LEFT);
+        result := true;
+        print('TRSLodestoneScreen.teleportTo(): result = true', TDebug.SUB);
+
+        if waitAfter then
+        repeat
+          wait(randomRange(500, 2000));
+          if (SRL_Events[EVENT_ANTIBAN] <> nil) then
+            SRL_Events[EVENT_ANTIBAN]();
+        until t.isFinished();
+      end;
+
+    end else
+      self.close();
+  end else
+      print('TRSLodestoneScreen.teleportTo(): lodestone screen never appeared', TDebug.ERROR);
+end;
+
+begin
+  lodestoneScreen.__init();
+end;
+
+{$f+}

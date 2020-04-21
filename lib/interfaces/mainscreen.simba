@@ -1,0 +1,445 @@
+(*
+Main Screen
+===========
+
+The main screen file holds functions and procedures that are used in the runescape mainScreen.
+
+The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/master/lib/interfaces/mainscreen.simba>`_.
+
+*)
+
+{$f-}
+
+(*
+Consts, Types, Vars
+~~~~~~~~~~~~~~~~~~~
+
+The following constants, types and variables are used throughout the main screen methods.
+
+**const Main Screen Angle**
+
+Constants that represent the possible angles of the mainScreen:
+
+    * MS_ANGLE_HIGH
+    * MS_ANGLE_LOW
+    * MS_ANGLE_NONE
+
+*)
+const
+  MS_ANGLE_HIGH  = 0;
+  MS_ANGLE_LOW   = 1;
+  MS_ANGLE_NONE  = 2;
+
+(*
+**type TRSMainScreen**
+
+.. code-block:: pascal
+
+    type
+      TRSMainScreen = TRSInterface;
+
+A type that stores the main screen properties.
+
+*)
+type
+  TRSMainScreen = record(TRSInterface)
+    playerPoint: TPoint;
+    playerBox: TBox;
+  end;
+
+(*
+**var mainScreen**
+
+.. code-block:: pascal
+
+    var
+      mainScreen: TRSMainScreen;
+
+A variable through which scripters can access the TRSMainScreen type methods.
+
+*)
+var
+  mainScreen: TRSMainScreen;
+
+(*
+TRSMainScreen methods
+~~~~~~~~~~~~~~~~~~~~~
+
+The following methods should be called through the **mainScreen** variable.
+
+Example:
+
+.. code-block:: pascal
+
+    if mainScreen.setZoom(true) then
+      writeln('We zoomed out the mainScreen');
+*)
+
+{*
+__init()
+--------
+
+.. code-block:: pascal
+
+    procedure TRSMainScreen.__init();
+
+Initializes the TRSMainScreen.
+
+.. note::
+
+    - by Coh3n
+    - Last updated: Mar. 10, 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    mainScreen.__init();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSMainScreen.__init();
+begin
+  with self do
+  begin
+    name := 'RS Mainscreen';
+    ID := ID_INTERFACE_MAINSCREEN;
+    parentID := -1;
+    isStatic := true;
+  end;
+end;
+{$ENDIF}
+
+{*
+__setup
+-------
+
+.. code-block:: pascal
+
+    procedure TRSMainScreen.__setup();
+
+Sets up the mainScreen's bounds based on where the actionbar is found.
+
+.. note::
+
+    - by Olly
+    - Last updated: 24 November 2013 by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    mainScreen.__setup();
+*}
+{$IFNDEF CODEINSIGHT}
+procedure TRSMainScreen.__setup();
+const
+  PLAYER_BOX_WIDTH = 28;
+  PLAYER_BOX_HEIGHT = 58;
+begin
+  self.setBounds(getClientBounds()); //  self.setBounds([0, 0, gameTabs.tabArea.x1-1, actionBar.y1-1]);
+  self.playerPoint := middleBox(getClientBounds()); //   self.playerPoint := middleBox([1, 1, 574, 387]); // the whole 3d gamescreen
+  self.playerBox := [self.playerPoint.x - PLAYER_BOX_WIDTH div 2, self.playerPoint.y - PLAYER_BOX_HEIGHT div 2,
+                     self.playerPoint.x + PLAYER_BOX_WIDTH div 2, self.playerPoint.y + PLAYER_BOX_HEIGHT div 2];
+end;
+{$ENDIF}
+
+(*
+setAngle
+--------
+
+.. code-block:: pascal
+
+    procedure TRSMainScreen.setAngle(angle: integer);
+
+Sets the mainScreen angle. The **angle** parameter should be one of the angle
+constants at the top of this page.
+
+.. note::
+
+    - by Raymond, edit by Naum
+    - Last Updated: 10 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if players[currentPlayer].login() then
+      mainScreen.setAngle(MS_ANGLE_HIGH);
+*)
+procedure TRSMainScreen.setAngle(angle: integer);
+begin
+  if (angle = MS_ANGLE_NONE) then
+    exit;
+
+  keyDown((angle * 2) + 38);
+  wait(1000 + random(300));
+  keyUp((angle * 2) + 38);
+  wait(300 + random(300));
+end;
+
+(*
+isPlayerAnimating
+-----------------
+
+.. code-block:: pascal
+
+    function TRSMainScreen.isPlayerAnimating(minShift: integer = 300): boolean;
+
+Returns true if the pixel shift around the player is more than **maxShift**
+*(default = 300)* This is calculated inside the mainScreen.playerBox as the
+average shift after 250ms, measured in 50ms intervals.
+
+.. note::
+
+    - by Coh3n
+    - Last Updated: 7 July 2014 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    while (mainScreen.isPlayerAnimating()) do
+    begin
+      antiban();
+      wait(50 + random(50));
+    end;
+*)
+function TRSMainScreen.isPlayerAnimating(minShift: integer = 300): boolean;
+begin
+  result := (getPixelShiftAverage(self.playerBox, 50, 250) >= minShift);
+end;
+
+(*
+setZoom
+-------
+
+.. code-block:: pascal
+
+    procedure TRSMainScreen.setZoom(zoomOut: boolean; scrolls: integer = 40);
+
+Zooms the mainScreen in or out depending on the **zoomOut** parameter. You can
+optionally adjust the **scrolls** amount to zoom in or out partially.
+
+.. note::
+
+    - by Ashaman88
+    - Last Updated: 9 August 2015 by The Mayor
+
+Example:
+
+.. code-block:: pascal
+
+    mainScreen.setZoom(true);
+*)
+procedure TRSMainScreen.setZoom(zoomOut: boolean; scrolls: integer = 40);
+begin
+  mouseScroll(self.getBounds().getRandomPoint(), scrolls + random(5), zoomOut);
+end;
+
+(*
+filterPointsPlayer
+------------------
+
+.. code-block:: pascal
+
+    procedure TRSMainScreen.filterPointsPlayer(var tpa: TPointArray);
+
+Clears all the points in the TPointArray **tpa** that fall within the
+mainScreen.playerBox. This is useful if your player's colors matches the colour
+of the object you are trying to find.
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      tpa: TPointArray;
+    begin
+      if findColors(tpa, 1234567, mainScreen.getBounds()) then
+      begin
+        mainScreen.filterPointsPlayer(tpa);
+        // ATPA code
+      end;
+    end;
+*)
+procedure TRSMainScreen.filterPointsPlayer(var tpa: TPointArray);
+var
+  tmp: TPointArray;
+begin
+  tmp := TPAFromBox(self.playerBox);
+  tpa := clearTPAFromTPA(tpa, tmp);
+end;
+
+(*
+findObject
+----------
+
+.. code-block:: pascal
+
+    function TRSMainScreen.findObject(var x, y: integer; cols, tols: TIntegerArray; colSettings: TColorSettings; sortFrom: TPoint; objWidth, objHeight, minCount: integer; mouseOverText: TStringArray; searchBox: TBox; mouseAction: integer = MOUSE_NONE): boolean;
+
+Returns true if an object is successfully found and clicked. If multiple matches
+are found, it will click the one closest to the player. It is recommended to only
+use this if you're object has very distinct colours.
+
+    * **ix, iy** : The coordinates of the object if found.
+    * **cols** : The colors to be found.
+    * **tols** : The tolerances on 'cols'.
+    * **colSettings** : The color settings (i.e. color tolerance speed and modifiers). See lib/utilities/color.simba.
+    * **sortFrom** : Sorts the TPA, starting with the point closest to this point.
+    * **objWidth** : The width (in pixels) of the object you're trying to find.
+    * **objHeight** : The height (in pixels) of the object you're trying to find.
+    * **minCount** : The minimum number of colors to be found on a single object.
+    * **mouseOverText** : The uptext of the object.
+    * **searchBox** : The area to search in.
+    * **mouseAction** : The action of the mouse. Default MOUSE_LEFT.
+
+.. note::
+
+    - by Wizzup?, Torrent Of Flame & Coh3n
+    - Last Updated: 30 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (mainScreen.findObject(x, y, [123457, 897637], [5, 10], colorSetting(2, 0.02, 0.13), mainScreen.getCenterPoint(), 50, 25, 40, ['Tree'], mainScreen.getBounds(), MOUSE_RIGHT)) then
+      writeln('Right-clicked object!');
+*)
+function TRSMainScreen.findObject(var ix, iy: integer; cols, tols: TIntegerArray; colSettings: TColorSettings; sortFrom: TPoint; objWidth, objHeight, minCount: integer; mouseOverText: TStringArray; searchBox: TBox; mouseAction: integer = MOUSE_LEFT): boolean;
+var
+  i, l: integer;
+  myPoint: TPoint;
+  aPoints: T2DPointArray;
+  ATPA: T2DPointArray;
+  TPA: TPointArray;
+  cs: TColorSettings;
+begin
+  result := false;
+  print('TRSMainScreen.findObject()', TDebug.HEADER);
+
+  cs.retrieve();
+  colSettings.apply();
+  l := length(cols);
+
+  setLength(ATPA, l);
+
+  for i := 0 to (l - 1) do
+    findColorsSpiralTolerance(ix, iy, ATPA[i], cols[i], searchBox, tols[i], colSettings);
+
+  cs.apply();
+
+  TPA := ATPA.merge();
+  filterPointsPlayer(TPA);
+  if (length(TPA) <= 0) then
+  begin
+    print('No colors found');
+    print('TRSMainScreen.findObject(): False', TDebug.FOOTER);
+    exit(false);
+  end;
+
+  print('Colors found: '+toStr(length(TPA)));
+
+  aPoints := TPA.toATPA(objWidth, objHeight);
+  aPoints.filterBetween(0, minCount); // removes objects that don't have enough colors
+  print('Possible objects found: '+toStr(length(aPoints)));
+
+  aPoints.sortFromFirstPoint(sortFrom);
+
+  // loop through each possible object
+  for i := 0 to high(aPoints) do
+  begin
+    myPoint := aPoints[i].getMiddle();
+    mouse(myPoint.rand(randomRange(-5, 5)), MOUSE_MOVE);
+
+    if (isMouseOverText(mouseOverText)) then
+    begin
+      getMousePos(ix, iy);
+      mouse(point(ix, iy), mouseAction);
+
+      print('Successfully mouse''d object');
+      result := true;
+      break;
+    end;
+  end;
+
+  print('TRSMainScreen.findObject(): '+toStr(result), TDebug.FOOTER);
+end;
+
+(*
+findObject (overload 1)
+-----------------------
+
+.. code-block:: pascal
+
+    function TRSMainScreen.findObject(var ix, iy: integer; col, tol: integer; colSettings: TColorSettings; sortFrom: TPoint; objWidth, objHeight, minCount: integer; mouseOverText: TStringArray; mouseAction: integer = MOUSE_NONE): boolean; overload;
+
+As above, except this overload takes slightly different parameters. It takes a
+single colour as opposed to multiple:
+
+    * **ix, iy** : The coordinates of the object if found.
+    * **col** : The color to be found.
+    * **tol** : The tolerance on 'col'.
+    * **colSettings** : The color settings (i.e. color tolerance speed and modifiers). See lib/utilities/color.simba.
+    * **sortFrom** : Sorts the TPA, starting with the point closest to this point.
+    * **objWidth** : The width (in pixels) of the object you're trying to find.
+    * **objHeight** : The height (in pixels) of the object you're trying to find.
+    * **minCount** : The minimum number of colors to be found on a single object.
+    * **mouseOverText** : The uptext of the object.
+    * **mouseAction** : The action of the mouse. Default MOUSE_LEFT.
+
+.. note::
+
+    - by Wizzup? & Torrent Of Flame
+    - Last Updated: 30 May 2013 by Coh3n
+
+Example:
+
+.. code-block:: pascal
+
+    if (mainScreen.findObject(x, y, 123457, 10, colorSetting(2, 0.02, 0.13), mainScreen.getCenterPoint(), 50, 25, 40, ['ake'])) then
+      writeln('Clicked object!');
+*)
+function TRSMainScreen.findObject(var ix, iy: integer; col, tol: integer; colSettings: TColorSettings; sortFrom: TPoint; objWidth, objHeight, minCount: integer; mouseOverText: TStringArray; mouseAction: integer = MOUSE_LEFT): boolean; overload;
+begin
+  result := self.findObject(ix, iy, [col], [tol], colSettings, sortFrom, objWidth, objHeight, minCount, mouseOverText, self.getBounds(), mouseAction);
+end;
+
+(*
+findObject (overload 2)
+-----------------------
+
+.. code-block:: pascal
+
+    function TRSMainScreen.findObject(var ix, iy: integer; col, tol: integer; mouseOverText: TStringArray; mouseAction: integer = MOUSE_LEFT): boolean; overload;
+
+As above, except this overload takes a single CTS1 color + tolerance.
+
+    * **ix, iy** : The coordinates of the object if found.
+    * **col** : The color to be found.
+    * **tol** : The tolerance on 'col'.
+    * **mouseOverText** : The uptext of the object.
+    * **mouseAction** : The action of the mouse. Default MOUSE_LEFT.
+
+.. note::
+
+    - by Olly
+    - Last Updated: 20 November by Olly
+
+Example:
+
+.. code-block:: pascal
+
+    if (mainScreen.findObject(x, y, 123457, 10, ['ake'])) then
+      writeln('Clicked object!');
+*)
+function TRSMainScreen.findObject(var ix, iy: integer; col, tol: integer; mouseOverText: TStringArray; mouseAction: integer = MOUSE_LEFT): boolean; overload;
+begin
+  result := self.findObject(ix, iy, col, tol, colorSetting(1), self.playerPoint, 15, 15, 2, mouseOverText, mouseAction);
+end;
+
+begin
+  mainScreen.__init();
+end;
+
+{$f+}
