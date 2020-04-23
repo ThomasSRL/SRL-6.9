@@ -653,18 +653,25 @@ Example:
 function TRSTabBackpack.waitForShift(waitTime: integer): boolean;
 var
   c: integer;
-  timeOut : LongWord;
+  timeOut: TCountDown;
 begin
   result := false;
   c := self.count();
-  timeOut := getSystemTime() + waitTime;
+  timeOut.setTime(waitTime);
 
-  while (timeOut >= getSystemTime()) do
+  repeat
     if (c <> self.count()) then
-      exit(true)
+      result := true
     else
       wait(20 + random(50));
+  until result or timeOut.isFinished();
+
+  if result then
+    print('TRSTabBackpack.waitForShift: backpack count changed after ' + intToStr(waittime - timeOut.timeRemaining()) + 'msec.')
+  else
+    print('TRSTabBackpack.waitForShift: Backpack count did not change.');
 end;
+
 
 (*
 waitSlotPixelChange
