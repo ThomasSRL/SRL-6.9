@@ -767,9 +767,10 @@ procedure TRSMinimap.clickCompass(faceSouth: boolean = false);
 begin
   if (not self.__setup()) then
   begin
-    print('TRSMinimap.clickCompass(): was not able to find the minimap', TDebug.SUB);
+    print('TRSMinimap.clickCompass(): was not able to find the minimap', TDebug.ERROR);
     exit();
   end;
+
   mouseCircle(self.button[MM_BUTTON_COMPASS].center.x, self.button[MM_BUTTON_COMPASS].center.y,
               self.button[MM_BUTTON_COMPASS].radius, MOUSE_MOVE);
 

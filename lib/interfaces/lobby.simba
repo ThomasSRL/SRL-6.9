@@ -166,22 +166,20 @@ var
   TPA: TPointArray;
   ATPA: T2DPointArray;
 begin
-  findColorsTolerance(TPA, 1579844, getClientBounds(), 17);
-  ATPA := TPA.cluster(1);
+  if findColorsTolerance(TPA, 1579844, getClientBounds(), 17) then
+    ATPA := TPA.cluster(1);
 
-  for i := 0 to high(atpa) do
+  for i := 0 to high(ATPA) do
   if inRange(length(ATPA[i]), 2500, 3500) then
     begin
       b := ATPA[i].getbounds();
       if inRange(b.getWidth(), 138, 140) and inRange(b.getHeight(), 32, 34) then
       begin    //Found the bordeau Lobby-Button, setting the bounds now
+        print('TRSLobby.__findLobby(): Found the bordeau Lobby-Button.', TDebug.SUB);
         self.tabBoxes := grid(6, 1, 45, 22, 100, 0, point(b.x1 - 15, b.y1 + 108));
-   //     nas.Drawing.drawBox(b, false, clBlue);
-   //     nas.drawing.drawboxes(self.tabBoxes, false, clgreen);
 
         b.edit(-85, 90, 545, 515);
         self.setbounds(b);
-   //     nas.Drawing.drawBox(b);
 
         exit(true);
       end;
@@ -216,6 +214,7 @@ var
   t: TCountDown;
 begin
   t.setTime(randomRange(800, 1200));
+  print('TRSLobby.isOpen(): checking if the lobby is open', TDebug.HEADER);
   repeat
     result := self.__findLobby();
 
@@ -223,7 +222,7 @@ begin
       wait(randomRange(40, 100));
 
   until result or t.isFinished();
-  print('TRSLobby.isOpen(): ' + toStr(result));
+  print('TRSLobby.isOpen(): ' + toStr(result), TDebug.FOOTER);
 end;
 
 (*

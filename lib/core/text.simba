@@ -9,7 +9,7 @@ The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/m
 
 *)
 
-{$loadlib libsimpleocr}
+{$loadlib libSimpleOCR}
 
 {$f-}
 

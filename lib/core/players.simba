@@ -205,15 +205,25 @@ var
   p: Tpoint;
   b: TBox;
 begin
+  print('isLoggedIn(): checking if the player is logged in', TDebug.HEADER);
+
   b := getClientBounds();
   p := point(b.x2 - 8, 8);
- // NAS.Drawing.drawCross(p, 4, clRed);
+
   result := (getColor(p) = LOGOUT_BUTTON_COLOUR);
+
   if (not result) then
+  begin
+    print('isLoggedIn(): did not find logout button in top right corner, looking for minimap', TDebug.SUB);
     result := minimap.__setup();
+    if result then
+      print('isLoggedIn(): found minimap, we are logged it, unlock your interface if the minimap is in top right corner', TDebug.HINT);
+  end;
 
   if result and (not __areDynamicInterfacesSet) then
     __setDynamicInterfaces();
+
+  print('isLoggedIn(): ' + toStr(result), TDebug.FOOTER);
 end;
 
 (*
@@ -669,9 +679,6 @@ begin
     result := true;
     print('__setInputBoxes(): Set username and password boxes', TDebug.SUB);
 
-   { bdsActive := tpaActive.getBounds();
-    bdsInactive := tpaInactive.getBounds(); }
-
     // sets the username box as the box that's closer to the top of the screen
     if (bdsActive.y1 < bdsInactive.y1) then
     begin
@@ -722,7 +729,8 @@ begin
   inputBox.offset(point(8, 0));
 
   repeat
-    if (isLoggedIn() or lobby.isOpen()) then exit(true);
+    if (isLoggedIn() or lobby.isOpen()) then
+      exit(true);
 
     if findColors(TPA, __LOGIN_COLOR_TEXT, inputBox) then
     begin
@@ -782,6 +790,7 @@ Example:
 {$IFNDEF CODEINSIGHT}
 procedure TPlayer.__respondToPopup(errorMessage: TVariantArray; tries: integer; out reachedMax: boolean);
 begin
+  print('TPlayer.__respondToPopup: closing popup', TDebug.SUB);
   typeByte(VK_ESCAPE);
 
   if (tries > errorMessage[2]) then
@@ -790,7 +799,7 @@ begin
 
     case errorMessage[3] of
       'Terminate': terminateScript();
-      'Set_World': self.world := 0;
+      'Set_World': self.world := -1;
 
       'Next_Player_F':
         begin
@@ -874,7 +883,8 @@ begin
     begin
       ATPA := TPA.cluster(8);
       ATPA.filterBetween(1, 1000);
-      if (length(ATPA) < 1) then exit();
+      if (length(ATPA) < 1) then
+        exit();
       ATPA.sortBySize(true);
 
       b := ATPA[0].getBounds();
@@ -890,30 +900,6 @@ begin
     end;
 end;
 {$ENDIF}
-            {
-// Temp procedure to close the NXT reminder (by Thomas) fixed 12th April 17
-procedure __nxtReminder();
-var
-  b: TBox;
-  p: TPoint;
-  TPA: TPointArray;
-  ATPA: T2DPointArray;
-  button_color: TColorData := [1087209, 19, [2, [0.12, 0.54, 0.00]]];
-begin
-  button_color.gatherIn(TPA, getClientBounds());
-  ATPA := TPA.cluster(1);
-  if length(ATPA) then
-  begin
-    ATPA.sortBySize();
-    if inRange(length(ATPA[0]), 2000, 2500) then
-    begin
-      b := ATPA[0].getBounds();
-      p := ATPA[0].getMiddle();
-      if inRange(b.getWidth(), 100, 200) and inRange(b.getHeight(), 10, 30) then
-        mouse(point(p.x + randomRange( - 25, 25), p.y + 30), MOUSE_LEFT);
-    end;
-  end
-end;  }
 
 {*
 __handleLoginPopup
@@ -945,9 +931,10 @@ var
   timeOut: TTimeMarker;
   popupMessage: string;
   errorMessage: TVariantArray;
-  messages: array [0..17] of TVariantArray;
+  messages: array [0..18] of TVariantArray;
 begin
   timeOut.start();
+  print('Player.__handleLoginPopup(): waiting for the login popup message to appear ', TDebug.SUB);
 
   repeat // Wait until the popup appears, or we hit the lobby/isLoggedIn
     case inLobby of
@@ -971,11 +958,13 @@ begin
 
     wait(random(500, 750));
   until (length(popupMessage) > 0);
+  print('Player.__handleLoginPopup(): got a popup: ' + popupMessage, TDebug.SUB);
 
   messages := [
     {Popup Text                         Wait time  MaxTries  Action}
-    ['Unknown login popup',                   0,         2,  'Next_Player_F'],
-    ['Invalid username or password',          0,         2,  'Next_Player_F'],
+    ['Unknown login popup',                   0,         3,  'Next_Player_F'],
+    ['Invalid username or password',          0,         3,  'Next_Player_F'],
+    ['Invalid email or password',             0,         3,  'Next_Player_F'],
     ['Your account has been disabled',        0,         0,  'Next_Player_F'],
     ['Your ban will be lifted in',            0,         0,  'Next_Player_F'],
     ['Your account has been involved in',     0,         0,  'Next_Player_F'],
@@ -985,10 +974,10 @@ begin
     ['Player in member-only area',            0,         0,  'Set_Member'],
     ['Error connecting',                      20000,     4,  'Terminate'],
     ['Unable to connect',                     20000,     4,  'Terminate'],
-    ['Runescape has been updated',            0,         0,  'Reload_Client'],
-    ['Client token changed',                  0,         0,  'Reload_Client'],
-    ['session has now ended',                 0,         0,  'Reload_Client'],
-    ['Our systems are currently unavailable', 3 * 60000, 8,  'Reload_Client'],
+    ['Runescape has been updated',            0,         0,  'Terminate'],         //Reload_Client needs to be fixed
+    ['Client token changed',                  0,         0,  'Terminate'],         //Reload_Client needs to be fixed
+    ['session has now ended',                 0,         0,  'Terminate'],         //Reload_Client needs to be fixed
+    ['Our systems are currently unavailable', 3 * 60000, 8,  'Terminate'],         //Reload_Client needs to be fixed
     ['Login limit exceeded',                  20000,     8,  'Set_World'],
     ['You must have a total skill level of',  0,         0,  'Set_World'],
     ['Cannot connect to world',               10000,     0,  'Set_World']];
@@ -1005,7 +994,7 @@ begin
   begin
     print('Unknown login popup message: ' + popupMessage, TDebug.WARNING);
     takeScreenshot('unknown_login_popup.png');
-     print('PLEASE report this in the SRL-6 bugs section: https://villavu.com/forum/project.php?projectid=10', TDebug.HINT);
+    print('PLEASE report this in the SRL-6 bugs section: https://villavu.com/forum/project.php?projectid=10', TDebug.HINT);
     errorMessage := ['Unknown login popup', 0, 3, 'Next_Player_F'];
   end;
 
@@ -1123,13 +1112,14 @@ begin
   repeat
     if isLoggedIn() then
     begin
-      print('Already logged in');
+      print('TPlayer.login(): Already logged in', TDebug.SUB);
       result := true;
       break;
     end;
 
     if self.loginToLobby() then
     begin
+      print('TPlayer.login(): in Lobbby', TDebug.SUB);
       if (self.world <> -1) then
         if (self.world = 0) then
           lobbyWorlds.selectRandomWorld(self.isMember)
@@ -1140,6 +1130,7 @@ begin
 
       if (not skipPlay) then
       begin
+        print('TPlayer.login(): already selected a favorite world', TDebug.SUB);
         if lobby.findPlayButton(b) then
           mouseBox(b, MOUSE_LEFT);
       end;
