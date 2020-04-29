@@ -167,21 +167,23 @@ var
   ATPA: T2DPointArray;
 begin
   if findColorsTolerance(TPA, 1579844, getClientBounds(), 17) then
+  begin
     ATPA := TPA.cluster(1);
+    ATPA.sortBySize();
+    for i := 0 to high(ATPA) do
+    if inRange(length(ATPA[i]), 2500, 3500) then
+      begin
+        b := ATPA[i].getbounds();
+        if inRange(b.getWidth(), 138, 140) and inRange(b.getHeight(), 32, 34) then
+        begin
+          print('TRSLobby.__findLobby(): Found the bordeau Lobby-banner.', TDebug.SUB);
+          self.tabBoxes := grid(6, 1, 45, 22, 100, 0, point(b.x1 - 15, b.y1 + 108));
 
-  for i := 0 to high(ATPA) do
-  if inRange(length(ATPA[i]), 2500, 3500) then
-    begin
-      b := ATPA[i].getbounds();
-      if inRange(b.getWidth(), 138, 140) and inRange(b.getHeight(), 32, 34) then
-      begin    //Found the bordeau Lobby-Button, setting the bounds now
-        print('TRSLobby.__findLobby(): Found the bordeau Lobby-Button.', TDebug.SUB);
-        self.tabBoxes := grid(6, 1, 45, 22, 100, 0, point(b.x1 - 15, b.y1 + 108));
+          b.edit(-85, 90, 545, 515);
+          self.setbounds(b);
 
-        b.edit(-85, 90, 545, 515);
-        self.setbounds(b);
-
-        exit(true);
+          exit(true);
+        end;
       end;
     end;
 end;
@@ -252,16 +254,21 @@ var
   tpa: TPointArray;
   atpa: T2DPointArray;
   i: integer;
+  ButtonColor: TColorData := [2136805, 15, [2, [0.17, 0.98, 0.00]]];
 begin
-
-  if findColorsTolerance(tpa, 3850483, getClientBounds(), 17) then
+  print('TRSLobby.findPlayButton()', TDebug.HEADER);
+  if ButtonColor.gatherIn(TPA, getClientBounds()) then
   begin
     atpa := tpa.cluster(30, 10);
+    ATPA.sortBySize();
 
     for i := 0 to high(atpa) do
       begin
+        if (length(ATPA[i]) < 1000) then
+          break;    //break only works because APTA has been sorted before this loop
         b := atpa[i].getBounds();
-        if inRange(b.getWidth(), 140, 160) then
+
+        if inRange(b.getWidth(), 170, 180) then
         begin
           result := true;
           break;
@@ -269,7 +276,7 @@ begin
       end;
   end;
 
-  print('TRSLobby.findPlayButton(): result = ' + boolToStr(result), TDebug.SUB);
+  print('TRSLobby.findPlayButton(): result = ' + boolToStr(result), TDebug.FOOTER);
 end;
 
 (*

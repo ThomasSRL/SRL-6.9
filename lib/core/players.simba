@@ -217,7 +217,9 @@ begin
     print('isLoggedIn(): did not find logout button in top right corner, looking for minimap', TDebug.SUB);
     result := minimap.__setup();
     if result then
-      print('isLoggedIn(): found minimap, we are logged it, unlock your interface if the minimap is in top right corner', TDebug.HINT);
+      print('isLoggedIn(): Unlock your interface and put the minimap in top right corner!', TDebug.HINT)
+    else
+      print('isLoggedIn(): did not find minimap either', TDebug.SUB);
   end;
 
   if result and (not __areDynamicInterfacesSet) then
@@ -1112,14 +1114,14 @@ begin
   repeat
     if isLoggedIn() then
     begin
-      print('TPlayer.login(): Already logged in', TDebug.SUB);
+      print('TPlayer.login(): Player ' + self.nickname + ' is already logged in', TDebug.SUB);
       result := true;
       break;
     end;
 
     if self.loginToLobby() then
     begin
-      print('TPlayer.login(): in Lobbby', TDebug.SUB);
+      print('TPlayer.login(): Player ' + self.nickname + ' is in lobby', TDebug.SUB);
       if (self.world <> -1) then
         if (self.world = 0) then
           lobbyWorlds.selectRandomWorld(self.isMember)
@@ -1130,7 +1132,6 @@ begin
 
       if (not skipPlay) then
       begin
-        print('TPlayer.login(): already selected a favorite world', TDebug.SUB);
         if lobby.findPlayButton(b) then
           mouseBox(b, MOUSE_LEFT);
       end;

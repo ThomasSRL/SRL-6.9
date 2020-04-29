@@ -655,6 +655,7 @@ var
   c: integer;
   timeOut: TCountDown;
 begin
+  print('TRSTabBackpack.waitForShift', TDebug.HEADER);
   result := false;
   c := self.count();
   timeOut.setTime(waitTime);
@@ -667,9 +668,9 @@ begin
   until result or timeOut.isFinished();
 
   if result then
-    print('TRSTabBackpack.waitForShift: backpack count changed after ' + intToStr(waittime - timeOut.timeRemaining()) + 'msec.')
+    print('TRSTabBackpack.waitForShift: backpack count changed after ' + intToStr(waittime - timeOut.timeRemaining()) + 'msec', TDebug.FOOTER)
   else
-    print('TRSTabBackpack.waitForShift: Backpack count did not change.');
+    print('TRSTabBackpack.waitForShift: Backpack count did not change', TDebug.FOOTER);
 end;
 
 
