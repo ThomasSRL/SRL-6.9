@@ -434,7 +434,7 @@ var
 begin
   j:=high(p);
 
-  for i to high(p) do
+  for i := 0 to high(p) do
     begin
       if ((p[i].y>self.y)<>(p[j].y>self.y)) and (self.x<(p[j].x-p[i].x)*(self.y-p[i].y)/(p[j].y-p[i].y)+p[i].x) then
         result := not result;

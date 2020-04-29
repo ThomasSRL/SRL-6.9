@@ -772,7 +772,7 @@ begin
       result := false;
     end;
 
-  end
+  end;
 
   print('TRSDepositBox.deposit(): ' + toStr(result), TDebug.SUB);
 end;

@@ -325,7 +325,7 @@ var
   TPA: TPointArray;
   ATPA: T2DPointArray;
   i: integer;
-  b: Tbox
+  b: Tbox;
 begin
   FindColorsTolerance(TPA, 4202552, getClientBounds(), 24);
   ATPA := TPA.cluster(5);
@@ -364,7 +364,7 @@ end;
 function TRSMinimap.__setup(): boolean;
 var
   p1, p2, p3, p4: TPoint;
-  b: TBox
+  b: TBox;
 begin
 
     p1 := self.__findLodestone();

@@ -242,7 +242,7 @@ begin
       b := tpa.getBounds();
       b.edit(-1, -1, +1, +1);
 
-      result := strToIntDef(getTextAtEx(b, 0, 1, 1, cols[i], 0, statChars, Numbers), 0);
+      result := strToIntDef(getTextAtEx(b, 0, 1, 1, cols[i], 0, 'statChars', Numbers), 0);
 
       case i of
         1: result := result * 1000;

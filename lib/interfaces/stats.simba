@@ -294,7 +294,7 @@ begin
       exit();
     end;
 
-    s := getTextAtEx(atpa[skillType].getBounds(), 0, 3, 3, __COLOR_STATS, 0, statChars, numbers);
+    s := getTextAtEx(atpa[skillType].getBounds(), 0, 3, 3, __COLOR_STATS, 0, 'statChars', numbers);
     result := strToIntDef(s, -1);
 
     print('tabStats.getSkillLevel('+toStr(skill)+'): result = ' + intToStr(result));

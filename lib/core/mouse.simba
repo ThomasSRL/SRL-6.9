@@ -167,7 +167,7 @@ begin
       W := round(W*1.2);
     wait(W);
     lastdist:= dist;
-  until(hypot(xs - xe, ys - ye) < 1)
+  until (hypot(xs - xe, ys - ye) < 1);
 
   if (round(xe) <> round(xs)) or (round(ye) <> round(ys)) then
     moveMouse(round(xe), round(ye));
@@ -271,7 +271,7 @@ begin
     W := round(W*0.9);
     wait(W);
     lastdist:= dist;
-  until(hypot(xs - xe, ys - ye) < 1)
+  until (hypot(xs - xe, ys - ye) < 1);
 
   if (round(xe) <> round(xs)) or (round(ye) <> round(ys)) then
     moveMouse(round(xe), round(ye));

@@ -187,7 +187,7 @@ begin
   t := (getSystemTime() + waitTime);
 
   repeat
-    result := self.__find()
+    result := self.__find();
 
     if (result) then
       break();
@@ -225,7 +225,7 @@ begin
   result := false;
 
   if (self.isOpen()) then
-    result := mouseText(['Exit'], [UpChars], self.getBounds(), MOUSE_LEFT);
+    result := mouseText(['Exit'], ['UpChars'], self.getBounds(), MOUSE_LEFT);
 
   print('pinScreen.close(): result = ' + boolToStr(result));
 end;
@@ -344,7 +344,7 @@ begin
   numberSlots.deleteIndex(7);
   numberSlots.deleteIndex(10);
 
-  if (findTxt(p, [toStr(number)], [UpCharsEx], area)) then
+  if (findTxt(p, [toStr(number)], ['UpCharsEx'], area)) then
     for i := 0 to high(numberSlots) do
       if (pointInBox(p, numberSlots[i])) then
       begin

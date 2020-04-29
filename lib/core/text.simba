@@ -145,7 +145,7 @@ Example:
 
 function containsMatch(needle, haystack: string; caseSensitive: boolean = true;  match: extended): boolean; overload;
 begin
-  result := containsMatch(needle, haystack, caseSensitive) > match
+  result := (containsMatch(needle, haystack, caseSensitive) > match);
   if result then
     print('Found "'+ needle +'" in string "'+ haystack +'".');
 end;
@@ -656,7 +656,7 @@ begin
 
   for i := 0 to (l - 1) do
   begin
-    s[i] := extractTextFromTPA(atpa[i], 1, 4, 5, MouseOverChars);
+    s[i] := extractTextFromTPA(atpa[i], 1, 4, 5, 'MouseOverChars');
 
     if ((i + 1) <= (l - 1)) then
       s[i] := s[i] + ' ';

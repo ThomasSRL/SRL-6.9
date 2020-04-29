@@ -179,14 +179,16 @@ var
   i, j: integer;
   line, bounds: TBox;
 begin
+  print('TRSTabBackpack.__find()', TDebug.SUB);
   if self.__findBottomLine(line) then
   begin
+      print('TRSTabBackpack.__find(): Found bottom line, now determining left line', TDebug.SUB);
       for i := line.y1 downto 0 do
        if similarcolors(getColor(line.x1 - 1, i), SIDE_COLOR, TOLERANCE) then
         continue
        else
         break();
-
+      print('TRSTabBackpack.__find(): Found bottom line, now determining right line', TDebug.SUB);
       for j := line.y2 downto 0 do
        if similarcolors(getColor(line.x2 + 1, j), SIDE_COLOR, TOLERANCE) then
         continue
@@ -195,7 +197,6 @@ begin
 
        if i = j then
         begin
-          print('TRSTabBackpack.__find(): calculating the height', TDebug.SUB);
           bounds := [line.x1 - 1, i, line.x2 + 1, line.y2];
           if (bounds.getheight() < 10) then
             exit(false);

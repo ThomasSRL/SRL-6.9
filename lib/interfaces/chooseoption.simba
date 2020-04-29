@@ -329,7 +329,7 @@ begin
     begin
       result[i].bounds := [0, (i * 16) + 1, wid - 1, min((i * 16) + 16, hei -1)];
       if not useTesseract then
-        result[i].str := getTextAtEx(result[i].bounds, 0, 5, 5, clRed, 0, UpCharsEx)
+        result[i].str := getTextAtEx(result[i].bounds, 0, 5, 5, clRed, 0, 'UpCharsEx')
       else
         result[i].str := Tesseract_GetText(result[i].bounds, Filter);
       result[i].bounds.offset(point(self.x1, self.y1));  // offset so its back on the mainscreen
