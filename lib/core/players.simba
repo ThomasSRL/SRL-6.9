@@ -1131,10 +1131,8 @@ begin
           lobbyWorlds.selectWorld(self.world);
 
       if (not skipPlay) then
-      begin
         if lobby.findPlayButton(b) then
           mouseBox(b, MOUSE_LEFT);
-      end;
 
       result := self.__handleLoginPopup(inc(tries), true, reachedMaxTries);
 

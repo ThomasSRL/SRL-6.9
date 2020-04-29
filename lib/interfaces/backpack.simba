@@ -122,42 +122,58 @@ begin
     tabIndex := TAB_BACKPACK;
     parentID := -1;
     isStatic := true;
-
-  //  __slots[0] := grid(5, 6, 33, 31, 42, 36, point(gameTabs.tabArea.x1 + 25, gameTabs.tabArea.y1 + 22));
-  //  __slots[1] := grid(5, 6, 33, 31, 42, 36, point(gameTabs.tabArea.x1 + 25, gameTabs.tabArea.y1 + 50));
   end;
 end;
 {$ENDIF}
+
+function TRSTabBackpack.__findCurrencyPouch(BottomLine: TBox): boolean;
+const
+  BOND_GREEN = 3852876;
+  BOND_GREEN_TOL = 40;
+var
+  i: integer;
+  b: TBox;
+begin
+  b := [BottomLine.x1, BottomLine.y1 + 5, BottomLine.x2, BottomLine.y2 + 25];
+  i := CountColorTolerance(BOND_GREEN, b, BOND_GREEN_TOL);
+  result := inrange(i, 23, 25);
+  print('TRSTabBackpack.__findCurrencyPouch(): result = ' + tostr(result), TDebug.SUB);
+end;
 
 function TRSTabBackpack.__findBottomLine(out bounds: TBox): boolean;
 const
   LINE_COLOR = 6247745;
 var
-  line: TPointArray;
-  atpa: T2DPointArray;
+  line_TPA: TPointArray;
+  line_ATPA: T2DPointArray;
   i: integer;
 begin
-  if findColors(line, LINE_COLOR, getClientBounds()) then
+  if findColors(line_TPA, LINE_COLOR, getClientBounds()) then
   begin
-    atpa := clusterTPA(line, 1);
-    atpa.sortBySize();
+    line_ATPA := clusterTPA(line_TPA, 1);
+    line_ATPA.sortBySize();
 
-    for i := 0 to high(atpa) do
+    for i := 0 to high(line_ATPA) do
     begin
-      bounds := getTPABounds(atpa[i]);
+      bounds := getTPABounds(line_ATPA[i]);
 
       if (bounds.y1 <> bounds.y2) then
         continue();
 
-      if (bounds.getwidth() > 75 ) then
-        exit(true);
+      if (bounds.getwidth() < 75) then
+        break();
+      print('TRSTabBackpack.__findBottomLine(): found a possible line, looking for Currency Pouch', TDebug.SUB);
+      if self.__findCurrencyPouch(bounds) then
+        exit(true)
+      else
+        print('TRSTabBackpack.__findBottomLine(): the found line does not belong to the backpack interface', TDebug.SUB);
     end;
   end;
 end;
 
 function TRSTabBackpack.__find(): boolean;
 const
-  COLOR = 4143146;
+  SIDE_COLOR = 4143146;
   TOLERANCE = 20;
 var
   i, j: integer;
@@ -166,22 +182,24 @@ begin
   if self.__findBottomLine(line) then
   begin
       for i := line.y1 downto 0 do
-       if similarcolors(getColor(line.x1 - 1, i), COLOR, TOLERANCE) then
+       if similarcolors(getColor(line.x1 - 1, i), SIDE_COLOR, TOLERANCE) then
         continue
        else
         break();
 
       for j := line.y2 downto 0 do
-       if similarcolors(getColor(line.x2 + 1, j), COLOR, TOLERANCE) then
+       if similarcolors(getColor(line.x2 + 1, j), SIDE_COLOR, TOLERANCE) then
         continue
        else
         break();
 
        if i = j then
         begin
+          print('TRSTabBackpack.__find(): calculating the height', TDebug.SUB);
           bounds := [line.x1 - 1, i, line.x2 + 1, line.y2];
-          if bounds.getheight() < 10 then
+          if (bounds.getheight() < 10) then
             exit(false);
+
           self.setbounds(bounds);
           exit(true);
        end;
@@ -216,14 +234,14 @@ var
   t: TCountDown;
 begin
   t.setTime(waitTime);
-
+  print('TRSTabBackpack.isOpen()', TDebug.Header);
   repeat
     result := self.__find();
     if not result then
       wait(25 + random(30));
   until result or t.isFinished();
 
-  print('TRSTabBackpack.isOpen(): result = ' + boolToStr(result), TDebug.SUB);
+  print('TRSTabBackpack.isOpen(): result = ' + boolToStr(result), TDebug.Footer);
 end;
 
 (*
@@ -668,7 +686,7 @@ begin
   until result or timeOut.isFinished();
 
   if result then
-    print('TRSTabBackpack.waitForShift: backpack count changed after ' + intToStr(waittime - timeOut.timeRemaining()) + 'msec', TDebug.FOOTER)
+    print('TRSTabBackpack.waitForShift: backpack count changed after ' + msToTime(waittime - timeOut.timeRemaining(), TIME_ABBREV), TDebug.FOOTER)
   else
     print('TRSTabBackpack.waitForShift: Backpack count did not change', TDebug.FOOTER);
 end;
@@ -872,7 +890,7 @@ Example:
 *)
 procedure TRSTabBackpack.dropItems(slotArr: TIntegerArray = DROP_PATTERN_REGULAR);
 var
-  r, I, l: integer;
+  I, l: integer;
   tia: TIntegerArray;
 begin
   if (not self.open()) then
@@ -977,8 +995,6 @@ Example:
     end;
 *)
 function TRSTabBackpack.countDTM(dtm: integer): integer;
-var
-  i, l: integer;
 begin
   result := 0;
 
