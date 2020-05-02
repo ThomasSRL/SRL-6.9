@@ -9,7 +9,6 @@ The source for this file can be found `here <https://github.com/SRL/SRL-6/blob/m
 *)
 
 {$f-}
-
 type
   TColorArray = array of TColor;
 
@@ -942,6 +941,5 @@ begin
   if (boxColor > -1) then
     self.drawBox(box, false, boxColor);
 end;
-
 
 {$f+}
