@@ -628,7 +628,7 @@ because slots 3 to 8 are inactive when you are not a member.
 .. note::
 
     - by The Mayor
-    - Last Updated: 10 July 2015 by The Mayor
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -643,8 +643,8 @@ var
   TPA: TPointArray;
   TBA : TBoxArray := self.__getSlotBoxes();
 begin
-  findColors(TPA, 5063989, TBA[geSlot - 1]);
-  result := length(TPA) < 5000;
+  findColors(TPA, 4801334, TBA[geSlot - 1]); // Changed Color
+  result := length(TPA) < 2500; // Changed count (should be found 2521 in inactive slots - most frequent non-black color)
 end;
 {$ENDIF}
 
