@@ -507,7 +507,7 @@ Returns a TBoxArray of the Grand Exchange input boxes, where you can type.
 .. note::
 
     - by Clarity
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -522,12 +522,15 @@ var
   TPA: TPointArray;
   ATPA: T2DPointArray;
   i: integer;
+  searchBox : TBox;
 begin
-  grandExchange.__find;
-  if findColors(TPA, 1388125, self.getBounds()) then
+  grandExchange.__find();
+  searchBox := [self.x1, self.y1 + 50, self.x2, self.y2]; // Added box to exclude header of GE which was giving false positive
+  //writeln(searchBox);
+  if findColors(TPA, 2366477, searchBox) then // Changed color
   begin
     ATPA := TPA.cluster(1);
-    ATPA.sortFromFirstPoint(Point(233, 261)); //changed this
+    ATPA.sortFromMidPoint(Point(self.x1 + round((self.x2 - self.x1)*0.35), self.y1)); // 35% is *just* on the left side of half way between the quantity and price box
     result := ATPA.getEachBounds();
   end;
 end;
@@ -546,7 +549,7 @@ Returns true if the buy or sell offer screen is open.
 .. note::
 
     - by The Mayor
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -564,9 +567,9 @@ begin
   timeOut := GetTickCount() + waitTime;
 
   while (GetTickCount() < timeOut) do
-    if findColors(TPA, 1388125, self.getBounds()) then
+    if findColors(TPA, 6247745, self.getBounds()) then // Changed to look for blue outline
     begin
-      if (length(TPA) = 1532) or (length(TPA) = 492) then
+      if (length(TPA) = 2862) then // Changed count
         exit(true);
     end;
 end;
@@ -760,7 +763,7 @@ Returns true if the offer is slot **geSlot** is currently buying.
 .. note::
 
     - by The Mayor
-    - Last Updated: 31 July 2015 by The Mayor
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -777,8 +780,8 @@ var
 begin
   if self.__isSlotAborted(geSlot) or self.__isSlotComplete(geSlot)
     then exit(false);
-  findColors(TPA, 2433824, TBA[geSlot - 1]);
-  findColors(TPA2, 3815734, TBA[geSlot - 1]); // If hovering the box
+  findColors(TPA, 3091496, TBA[geSlot - 1]); // Changed colors
+  findColors(TPA2, 4407613, TBA[geSlot - 1]); // If hovering the box
   TPA.combine(TPA2);
   result := (length(TPA) > 10000);
   print('TRSGrandExchange.isSlotBuying(): Slot ' + toStr(geSlot) + ' = ' + boolToStr(result), TDebug.SUB);
@@ -998,8 +1001,8 @@ const
 var
   i: integer;
   timeOut: UInt64;
-  resultsBox: TBoxArray := grid(3, 2, 166, 49, 172, 55, point(self.x1 + 104, self.y1 + 405));
-  resultsTextBox: TBoxArray := grid(3, 2, 122, 35, 172, 55, point(self.x1 + 120, self.y1 + 396));
+  resultsBox: TBoxArray := grid(3, 2, 164, 49, 170, 55, point(self.x1+105, self.y1 + 410)); // Updated box locations
+  resultsTextBox: TBoxArray := grid(3, 2, 122, 38, 170, 55, point(self.x1 + 122, self.y1 + 410)); // Updated box locations
   inputBox: TBoxArray;
 begin
   timeOut := GetTickCount() + randomRange(3000, 4000);
@@ -1011,7 +1014,7 @@ begin
   if self.__findInsertionCursor(inputBox[2]) then
     typeSend(itemName, false);
 
-  if waitColorCountRange(9214319, 11, resultsTextBox[0], randomRange(5000, 7000), 10) then
+  if waitColorCountRange(8286291, 14, colorSetting(2, 0.03, 0.36), resultsTextBox[0], random(5000,8000), 10) then // Updated colors
     for i := 0 to 5 do
       if (stringMatch(trim(tesseractGetText(resultsTextBox[i], TESS_FILTER_GE_CHARS)), itemName) >= 0.75) or
       containsMatch(tesseractGetText(resultsTextBox[i], TESS_FILTER_GE_CHARS), itemName, false,  0.75) then
