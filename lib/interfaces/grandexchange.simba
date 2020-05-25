@@ -1046,7 +1046,7 @@ the back arrow to return to the summary screen.
 .. note::
 
     - by The Mayor
-    - Last Updated: 27 July 2015 by Clarity
+    - Last Updated: 25 May 2020 by 3Garrett3
 
 Example:
 
@@ -1056,7 +1056,7 @@ Example:
 
 *}
 {$IFNDEF CODEINSIGHT}
-procedure TRSGrandExchange.__returnToSummary();
+procedure TRSGrandExchange.__returnToSummary(useHotkey : Boolean = False);
 var
   backButton: TPoint := [self.x1 + 33, self.y1 + 515];
   timeOut: UInt64;
@@ -1064,7 +1064,11 @@ begin
   if self.__isOfferOpen() or self.__isProgressOpen() then
   begin
     print('TRSGrandExchange._returnToSummary(): returning to summary screen', TDebug.SUB);
-    multiClick(backButton.rand(5), 30, 3);
+
+    if not useHotkey then
+      multiClick(backButton.rand(5), 30, 3)
+    else
+      typeByte(VK_BACK); // Added backspace hotkey
 
     timeOut := GetTickCount() + randomRange(2500, 3500);
     while GetTickCount() < timeOut do
@@ -1174,7 +1178,7 @@ var
   timeOut: UInt64;
   i: integer;
 begin
-  self.__returnToSummary();
+  self.__returnToSummary(useHotkey);
 
   if (not self.__isSlotActive(geSlot)) or self.__isSlotEmpty(geSlot) then
   begin
@@ -1231,7 +1235,7 @@ var
 begin
   if not self.__isProgressOpen() then
   begin
-    self.__returnToSummary();
+    self.__returnToSummary(useHotkey);
 
     if not self.__openSlot(geSlot, useHotkey) then // Put common code into openSlot function
     begin
@@ -1254,7 +1258,7 @@ begin
         end;
       end;
 
-  self.__returnToSummary();
+  self.__returnToSummary(useHotkey);
 
   print('TRSGrandExchange.collectSlot(): Slot ' + toStr(geSlot) + ' = ' + boolToStr(result));
 end;
@@ -1383,7 +1387,7 @@ begin
     exit(false);
   end;
 
-  self.__returnToSummary();
+  self.__returnToSummary(useHotkey);
 
   if self.__isSlotEmpty(geSlot) or (not self.__isSlotActive(geSlot)) then
   begin
@@ -1417,7 +1421,7 @@ begin
     else
     begin
       result := self.__isSlotAborted(geSlot);
-      self.__returnToSummary();
+      self.__returnToSummary(useHotkey);
     end;
   end;
 
