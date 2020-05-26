@@ -1474,28 +1474,23 @@ getPercentDone
 
 .. code-block:: pascal
 
-    function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+    function TRSGrandExchange._getProgressCount(geSlot: integer): integer;
 
-Returns the percentage toward completion for the offer in **geSlot** .
+Used internally for getting percentage completion.
 
 .. note::
 
     - by turpinator
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 25 May 2020 by 3Garrett3
 
 Example:
 
 .. code-block:: pascal
 
-    var
-      per: Integer;
-    begin
-      per := grandExchange.getPercentDone(2);
-      writeLn('Slot 2 is ' + toStr(per) + ' percent complete!');
-    end;
+    percentDone := grandExchange.__getProgressCount(1) * 0.6462;
 
 *)
-function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+function TRSGrandExchange.__getProgressCount(geSlot: integer): integer;
 const
   BG_COLORS = [2500653, 1974051, 2565929, 2039584];
 var
@@ -1511,7 +1506,71 @@ begin
     for i := 0 to high(BG_COLORS) do
       if (getColor(x + result, y) = BG_COLORS[i]) then
         break(2);
-  exit(round(0.6462 * (result)));
+end;
+
+(*
+getPercentDone
+--------------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+
+Returns the percentage toward completion for the offer in **geSlot** .
+
+.. note::
+
+    - by turpinator
+    - Last Updated: 25 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      per: Integer;
+    begin
+      per := grandExchange.getPercentDone(2);
+      writeLn('Slot 2 is ' + toStr(per) + ' percent complete!');
+    end;
+
+*)
+function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+begin
+  result := round(0.6462 * self.__getProgressCount(geSlot)); // Moved counting to separate function
+end;
+
+(*
+getPercentDone
+--------------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.getPercentDone(geSlot: integer): Extended;
+
+Returns the percentage toward completion for the offer in **geSlot**. Returns
+decimal value.
+
+.. note::
+
+    - by turpinator
+    - Last Updated: 25 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      per: Extended;
+    begin
+      per := grandExchange.getPercentDone(2);
+      writeLn('Slot 2 is ' + toStr(per*100) + ' percent complete!');
+    end;
+
+*)
+function TRSGrandExchange.getPercentDone(geSlot: integer): Extended; overload;
+begin
+  result := 0.6462 * self.__getProgressCount(geSlot);
 end;
 
 (*
