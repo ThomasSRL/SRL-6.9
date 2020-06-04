@@ -200,7 +200,9 @@ begin
 
   repeat
     result := self.__find();
-    wait(25 + random(35));
+
+    if (not result) then
+      wait(25 + random(35));
   until result or t.isFinished();
 
   print('TRSChooseOption.isOpen(): result = ' + boolToStr(result), TDebug.SUB);

@@ -179,7 +179,7 @@ begin
           b := [bar.x2 - 10, bar.y1, bar.x2, bar.y1 + 10];
 
           EoC := (countColorTolerance(4499917, b, 80) > 10);
-          print('TRSActionBar.__find(): EoC = ' + toStr(EoC));
+          print('TRSActionBar.__find(): EoC = ' + toStr(EoC), TDebug.Sub);
 
           height := bar.getHeight();
           case bar.getHeight() of
@@ -195,7 +195,7 @@ begin
           if result then
           begin
             self.setBounds(bar);
-            print('TRSActionBar.__find(): bar height = ' + toStr(height));
+            print('TRSActionBar.__find(): bar height = ' + toStr(height), TDebug.Sub);
 
             if (not self.setSlots) then
             begin
@@ -1127,9 +1127,12 @@ const
 var
   xx, yy: integer;
 begin
+  print('TRSActionBar.__getPercent', TDebug.HEADER);
+
   if (not self.__find()) then
     begin
       print('Cannot read the Percentage, since we can''t find the actionbar!', TDebug.ERROR);
+      print('TRSActionBar.__getPercent: failed to read percentage', TDebug.FOOTER);
       exit();
     end;
 
@@ -1141,6 +1144,7 @@ begin
       break();
 
   result := round(result/0.80);
+  print('TRSActionBar.__getPercent: result = ' + toStr(result), TDebug.FOOTER);
 end;
 {$ENDIF}
 

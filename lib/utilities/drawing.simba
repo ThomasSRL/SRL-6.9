@@ -47,7 +47,7 @@ Example:
     tmb.clear();
 
 *)
-procedure TMufasaBitmap.clear();
+procedure TMufasaBitmap.clear(); constref;
 begin
   self.drawClear(0);
 end;
@@ -74,7 +74,7 @@ Example:
     tmb.clearArea(intToBox(5, 5, 10, 10));
 
 *)
-procedure TMufasaBitmap.clearArea(area: TBox);
+procedure TMufasaBitmap.clearArea(area: TBox); constref;
 begin
   self.rectangle(area, 0);
 end;
@@ -101,7 +101,7 @@ Example:
     tmb.drawBox(intToBox(50, 50, 345, 345), false, clLime);
 
 *)
-procedure TMufasaBitmap.drawBox(box: TBox; fill: boolean; color: TColor);
+procedure TMufasaBitmap.drawBox(box: TBox; fill: boolean; color: TColor); constref;
 var
   tpa: TPointArray;
 begin
@@ -141,7 +141,7 @@ Example:
     tmb.drawBox(intToBox(50, 50, 345, 345));
 
 *)
-procedure TMufasaBitmap.drawBox(box: TBox; color: TColor = clRed); overload;
+procedure TMufasaBitmap.drawBox(box: TBox; color: TColor = clRed); constref; overload;
 begin
   self.drawBox(box, false, color);
 end;
@@ -168,7 +168,7 @@ Example:
 
     tmb.drawBox(intToBox(50, 50, 345, 345));
 *)
-procedure TMufasaBitmap.drawBox(x1, y1, x2, y2: integer; fill: boolean; color: TColor); overload;
+procedure TMufasaBitmap.drawBox(x1, y1, x2, y2: integer; fill: boolean; color: TColor); constref; overload;
 begin
   self.drawBox(intToBox(x1, y1, x2, y2), fill, color);
 end;
@@ -195,7 +195,7 @@ Example:
 
     tmb.drawClippedBox(intToBox(50, 50, 100, 100), true, clLime);
 *)
-procedure TMufasaBitmap.drawClippedBox(box: TBox; fill: boolean; color: TColor);
+procedure TMufasaBitmap.drawClippedBox(box: TBox; fill: boolean; color: TColor); constref;
 var
   b: TBox;
 begin
@@ -230,7 +230,7 @@ Example:
                    intToBox(440, 440, 600, 600)], true, clRed);
 
 *)
-procedure TMufasaBitmap.drawBoxes(boxArr: TBoxArray; fill: boolean; color: TColor);
+procedure TMufasaBitmap.drawBoxes(boxArr: TBoxArray; fill: boolean; color: TColor); constref;
 var
   i, h: integer;
 begin
@@ -264,7 +264,7 @@ Example:
                    intToBox(440, 440, 600, 600)], true, [clRed, clLime, clOrange]);
 
 *)
-procedure TMufasaBitmap.drawBoxes(boxArr: TBoxArray; fill: boolean; colors: TColorArray); overload;
+procedure TMufasaBitmap.drawBoxes(boxArr: TBoxArray; fill: boolean; colors: TColorArray); constref; overload;
 var
   l, i: integer;
 begin
@@ -303,7 +303,7 @@ Example:
     tmb.drawRoundBox(intToBox(222, 222, 666, 666), 111, true, clOrange);
 
 *)
-procedure TMufasaBitmap.drawRoundBox(const box: TBox; const roundness: integer; const fill: boolean; const color: TColor);
+procedure TMufasaBitmap.drawRoundBox(const box: TBox; const roundness: integer; const fill: boolean; const color: TColor); constref;
 var
   tmpTBitmap: TBitmap;
   tmpMufasa: TMufasaBitmap;
@@ -355,7 +355,7 @@ Example:
     tmb.drawBitmap(bmp, point(50, 50));
 
 *)
-procedure TMufasaBitmap.drawBitmap(bmp: integer; pnt: TPoint);
+procedure TMufasaBitmap.drawBitmap(bmp: integer; pnt: TPoint); constref;
 begin
   if (bitmapExists(bmp)) then
     getMufasaBitmap(bmp).drawTransparent(pnt.x, pnt.y, self)
@@ -386,7 +386,7 @@ Example:
     tmb.drawBitmap('simba/scripts/foo.png', point(11, 11));
 
 *)
-function TMufasaBitmap.drawBitmap(path: string; pnt: TPoint): boolean; overload;
+function TMufasaBitmap.drawBitmap(path: string; pnt: TPoint): boolean; constref; overload;
 var
   bmp: integer;
 begin
@@ -425,7 +425,7 @@ Example:
     tmb.drawCross(point(200, 200), 4, clLime);
 
 *)
-procedure TMufasaBitmap.drawCross(pnt: TPoint; size: integer; color: TColor);
+procedure TMufasaBitmap.drawCross(pnt: TPoint; size: integer; color: TColor); constref;
 begin
   if (size < 1) then
     exit();
@@ -460,7 +460,7 @@ Example:
     tmb.drawEllipse(point(500, 500), 20, 50, true, clLime);
 
 *)
-procedure TMufasaBitmap.drawEllipse(const pnt: TPoint; const xRadius, yRadius: integer; const fill: boolean; const color: TColor);
+procedure TMufasaBitmap.drawEllipse(const pnt: TPoint; const xRadius, yRadius: integer; const fill: boolean; const color: TColor); constref;
 var
   tpa: TPointArray;
 begin
@@ -495,7 +495,7 @@ Example:
     tmb.drawCircle(point(500, 500), 50, false, clLime);
 
 *)
-procedure TMufasaBitmap.drawCircle(pnt: TPoint; radius: integer; fill: boolean; color: TColor);
+procedure TMufasaBitmap.drawCircle(pnt: TPoint; radius: integer; fill: boolean; color: TColor); constref;
 begin
   self.drawEllipse(pnt, radius, radius, fill, color);
 end;
@@ -523,7 +523,7 @@ Example:
     tmb.drawPolygon([point(10, 10), point(100, 100), point(500, 500), point(230, 555)], clLime);
 
 *)
-procedure TMufasaBitmap.drawPolygon(polygonPnts: TPointArray; color: TColor);
+procedure TMufasaBitmap.drawPolygon(polygonPnts: TPointArray; color: TColor); constref;
 var
   i, h: Integer;
 begin
@@ -560,7 +560,7 @@ Example:
     tmb.drawText('hello world!', point(55, 55), upchars, false, clRed);
 
 *)
-procedure TMufasaBitmap.drawText(txt: string; pnt: TPoint; font: string; shadow: boolean; color: TColor); overload;
+procedure TMufasaBitmap.drawText(txt: string; pnt: TPoint; font: string; shadow: boolean; color: TColor); constref; overload;
 var
   tpa, tpaShadow: TPointArray;
 begin
@@ -600,7 +600,7 @@ Example:
     tmb.drawText('hello world!', point(55, 55), clLime);
 
 *)
-procedure TMufasaBitmap.drawText(txt: string; pnt: TPoint; color: TColor); overload;
+procedure TMufasaBitmap.drawText(txt: string; pnt: TPoint; color: TColor); constref; overload;
 begin
   self.drawText(txt, pnt, 'StatChars', true, color);
 end;
@@ -626,7 +626,7 @@ Example:
 
     tmb.drawClippedText('hello world!', point(55, 55), 'StatChars', true, clLime);
 *)
-procedure TMufasaBitmap.drawClippedText(txt: string; pnt: TPoint; font: string; shadow: boolean; color: TColor);
+procedure TMufasaBitmap.drawClippedText(txt: string; pnt: TPoint; font: string; shadow: boolean; color: TColor); constref;
 var
   tpa, tpaShadow: TPointArray;
 begin
@@ -668,7 +668,7 @@ Example:
     tmb.drawTextArray(['hello', 'world'], [point(50, 50), point(100, 111)], bigchars, false, clBlue);
 
 *)
-procedure TMufasaBitmap.drawTextArray(txtArr: TStringArray; pnts: TPointArray; font: string; shadow: boolean; color: TColor);
+procedure TMufasaBitmap.drawTextArray(txtArr: TStringArray; pnts: TPointArray; font: string; shadow: boolean; color: TColor); constref;
 var
   i, l: integer;
 begin
@@ -706,7 +706,7 @@ Example:
     tmb.drawTextLines(['olly', 'is', 'the', 'best', ':D'], point(2, 2), statChars, false, clRed);
 
 *)
-procedure TMufasaBitmap.drawTextLines(txtArr: TStringArray; pnt: TPoint; font: string; shadow: boolean; color: TColor);
+procedure TMufasaBitmap.drawTextLines(txtArr: TStringArray; pnt: TPoint; font: string; shadow: boolean; color: TColor); constref;
 var
   atpa: T2DPointArray;
   tpa, shadowTPA: TPointArray;
@@ -758,7 +758,7 @@ Example:
     getMufasaBitmap(bitmap).debug();
 
 *)
-procedure TMufasaBitmap.debug();
+procedure TMufasaBitmap.debug(); constref;
 begin
   if (not bitmapExists(self.getIndex())) then
   begin
@@ -795,7 +795,7 @@ Example:
     tmb.debugTPA(tpa);
 
 *)
-procedure TMufasaBitmap.debugTPA(tpa: TPointArray; drawPoints: boolean = true);
+procedure TMufasaBitmap.debugTPA(tpa: TPointArray; drawPoints: boolean = true); constref;
 var
   mid: TPoint;
   l: integer;
@@ -838,7 +838,7 @@ Example:
     tmb.debugATPA(atpa);
 
 *)
-procedure TMufasaBitmap.debugATPA(const atpa: T2DPointArray);
+procedure TMufasaBitmap.debugATPA(const atpa: T2DPointArray); constref;
 var
   i, l, c: integer;
   b: TBox;
@@ -893,7 +893,7 @@ Example:
     tmb.debugDTM(myDTM, mainScreen.getBounds(), clRed);
 
 *)
-procedure TMufasaBitmap.debugDTM(dtm: integer; area: TBox; color: TColor);
+procedure TMufasaBitmap.debugDTM(dtm: integer; area: TBox; color: TColor); constref;
 var
   tpa: TPointArray;
   atpa: T2DPointArray;
@@ -933,7 +933,7 @@ begin
   self.drawTPA(tpa, color);
 end;
 
-procedure TMufasaBitmap.drawCrosshairs(const box: TBox; const pnt: TPoint; const color: TColor; const boxColor: integer = -1);
+procedure TMufasaBitmap.drawCrosshairs(const box: TBox; const pnt: TPoint; const color: TColor; const boxColor: integer = -1); constref;
 begin
   self.rectangle(TBox([box.x1, box.y1 + pnt.y, box.x2, box.y1 + pnt.y]), color); // faster than lineTo :)
   self.rectangle(TBox([box.x1 + pnt.x, box.y1, box.x1 + pnt.x, box.y2]), color);
