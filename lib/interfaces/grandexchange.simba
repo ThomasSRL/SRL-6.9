@@ -507,7 +507,7 @@ Returns a TBoxArray of the Grand Exchange input boxes, where you can type.
 .. note::
 
     - by Clarity
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -522,12 +522,15 @@ var
   TPA: TPointArray;
   ATPA: T2DPointArray;
   i: integer;
+  searchBox : TBox;
 begin
-  grandExchange.__find;
-  if findColors(TPA, 1388125, self.getBounds()) then
+  grandExchange.__find();
+  searchBox := [self.x1, self.y1 + 50, self.x2, self.y2]; // Added box to exclude header of GE which was giving false positive
+  //writeln(searchBox);
+  if findColors(TPA, 2366477, searchBox) then // Changed color
   begin
     ATPA := TPA.cluster(1);
-    ATPA.sortFromFirstPoint(Point(233, 261)); //changed this
+    ATPA.sortFromMidPoint(Point(self.x1 + round((self.x2 - self.x1)*0.35), self.y1)); // 35% is *just* on the left side of half way between the quantity and price box
     result := ATPA.getEachBounds();
   end;
 end;
@@ -546,7 +549,7 @@ Returns true if the buy or sell offer screen is open.
 .. note::
 
     - by The Mayor
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -564,9 +567,9 @@ begin
   timeOut := GetTickCount() + waitTime;
 
   while (GetTickCount() < timeOut) do
-    if findColors(TPA, 1388125, self.getBounds()) then
+    if findColors(TPA, 6247745, self.getBounds()) then // Changed to look for blue outline
     begin
-      if (length(TPA) = 1532) or (length(TPA) = 492) then
+      if (length(TPA) = 2862) then // Changed count
         exit(true);
     end;
 end;
@@ -606,8 +609,12 @@ begin
     if findColors(TPA, 6247745, self.getBounds()) then
     begin
       if (length(TPA) = 3501) then
-        exit(true);
+      begin
+        result := True;
+        break;
+      end;
     end;
+  print('TRSGrandExchange.isProgressOpen() = ' + boolToStr(result), TDebug.SUB);
 end;
 {$ENDIF}
 
@@ -625,7 +632,7 @@ because slots 3 to 8 are inactive when you are not a member.
 .. note::
 
     - by The Mayor
-    - Last Updated: 10 July 2015 by The Mayor
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -640,8 +647,8 @@ var
   TPA: TPointArray;
   TBA : TBoxArray := self.__getSlotBoxes();
 begin
-  findColors(TPA, 5063989, TBA[geSlot - 1]);
-  result := length(TPA) < 5000;
+  findColors(TPA, 4801334, TBA[geSlot - 1]); // Changed Color
+  result := length(TPA) < 2500; // Changed count (should be found 2521 in inactive slots - most frequent non-black color)
 end;
 {$ENDIF}
 
@@ -760,7 +767,7 @@ Returns true if the offer is slot **geSlot** is currently buying.
 .. note::
 
     - by The Mayor
-    - Last Updated: 31 July 2015 by The Mayor
+    - Last Updated: 19 May 2020 by 3Garrett3
 
 Example:
 
@@ -777,8 +784,8 @@ var
 begin
   if self.__isSlotAborted(geSlot) or self.__isSlotComplete(geSlot)
     then exit(false);
-  findColors(TPA, 2433824, TBA[geSlot - 1]);
-  findColors(TPA2, 3815734, TBA[geSlot - 1]); // If hovering the box
+  findColors(TPA, 3091496, TBA[geSlot - 1]); // Changed colors
+  findColors(TPA2, 4407613, TBA[geSlot - 1]); // If hovering the box
   TPA.combine(TPA2);
   result := (length(TPA) > 10000);
   print('TRSGrandExchange.isSlotBuying(): Slot ' + toStr(geSlot) + ' = ' + boolToStr(result), TDebug.SUB);
@@ -998,8 +1005,8 @@ const
 var
   i: integer;
   timeOut: UInt64;
-  resultsBox: TBoxArray := grid(3, 2, 166, 49, 172, 55, point(self.x1 + 104, self.y1 + 405));
-  resultsTextBox: TBoxArray := grid(3, 2, 122, 35, 172, 55, point(self.x1 + 120, self.y1 + 396));
+  resultsBox: TBoxArray := grid(3, 2, 164, 49, 170, 55, point(self.x1+105, self.y1 + 410)); // Updated box locations
+  resultsTextBox: TBoxArray := grid(3, 2, 122, 38, 170, 55, point(self.x1 + 122, self.y1 + 410)); // Updated box locations
   inputBox: TBoxArray;
 begin
   timeOut := GetTickCount() + randomRange(3000, 4000);
@@ -1011,7 +1018,7 @@ begin
   if self.__findInsertionCursor(inputBox[2]) then
     typeSend(itemName, false);
 
-  if waitColorCountRange(9214319, 11, resultsTextBox[0], randomRange(5000, 7000), 10) then
+  if waitColorCountRange(8286291, 14, colorSetting(2, 0.03, 0.36), resultsTextBox[0], random(5000,8000), 10) then // Updated colors
     for i := 0 to 5 do
       if (stringMatch(trim(tesseractGetText(resultsTextBox[i], TESS_FILTER_GE_CHARS)), itemName) >= 0.75) or
       containsMatch(tesseractGetText(resultsTextBox[i], TESS_FILTER_GE_CHARS), itemName, false,  0.75) then
@@ -1039,7 +1046,7 @@ the back arrow to return to the summary screen.
 .. note::
 
     - by The Mayor
-    - Last Updated: 27 July 2015 by Clarity
+    - Last Updated: 25 May 2020 by 3Garrett3
 
 Example:
 
@@ -1049,7 +1056,7 @@ Example:
 
 *}
 {$IFNDEF CODEINSIGHT}
-procedure TRSGrandExchange.__returnToSummary();
+procedure TRSGrandExchange.__returnToSummary(useHotkey : Boolean = False);
 var
   backButton: TPoint := [self.x1 + 33, self.y1 + 515];
   timeOut: UInt64;
@@ -1057,7 +1064,11 @@ begin
   if self.__isOfferOpen() or self.__isProgressOpen() then
   begin
     print('TRSGrandExchange._returnToSummary(): returning to summary screen', TDebug.SUB);
-    multiClick(backButton.rand(5), 30, 3);
+
+    if not useHotkey then
+      multiClick(backButton.rand(5), 30, 3)
+    else
+      typeByte(VK_BACK); // Added backspace hotkey
 
     timeOut := GetTickCount() + randomRange(2500, 3500);
     while GetTickCount() < timeOut do
@@ -1077,7 +1088,7 @@ countFreeSlots
 
     function TRSGrandExchange.countFreeSlots(): integer;
 
-Returns the amount of free slots in the GE interface.
+Returns the amount of free (empty) slots in the GE interface.
 
 .. note::
 
@@ -1103,21 +1114,110 @@ begin
       inc(result);
 end;
 
+{*
+countActiveSlots
+--------------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.countActiveSlots(): integer;
+
+Returns the amount of active slots for trades. F2P gets 3 slots, member get 8.
+Can be used to determine that slots are visible.
+
+.. note::
+
+    - by 3Garrett3
+    - Last Updated: 20 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    if (grandExchange.countActiveSlots() > 0) then
+      grandExchange.countFreeSlots();
+
+*}
+
+function TRSGrandExchange.countActiveSlots(): integer;
+var
+  i: integer;
+  TBA: TBoxArray := self.__getSlotBoxes();
+begin
+  for i := 1 to length(TBA) do
+    if self.__isSlotActive(i) then
+      inc(result);
+end;
+
+(*
+__openSlot
+-----------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.openSlot(geSlot: integer): boolean;
+
+Returns true if it opens a slot. Works for in progress, completed, or aborted slots.
+
+.. note::
+
+    - by 3Garrett3
+    - Last Updated: 20 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    if grandExchange.__openSlot(2) then
+      // Continue collecting, aborting, etc;
+
+*)
+function TRSGrandExchange.__openSlot(geSlot: integer; useHotkey : boolean = False): boolean;
+var
+  TBA: TBoxArray := self.__getSlotBoxes();
+  timeOut: UInt64;
+  i: integer;
+begin
+  self.__returnToSummary(useHotkey);
+
+  if (not self.__isSlotActive(geSlot)) or self.__isSlotEmpty(geSlot) then
+  begin
+    print('TRSGrandExchange.__openSlot(): Cannot open as offer slot ' + toStr(geSlot) + ' is empty', TDebug.ERROR);
+    exit(false);
+  end;
+
+  timeOut := GetTickCount() + randomRange(3000, 4000);
+
+  repeat
+    case useHotkey of
+      True: SendKeys(toStr(geSlot), 50, 25);
+      False: mouseBox(TBA[geSlot - 1], MOUSE_LEFT);
+    end;
+    if self.__isProgressOpen(2000 + random(500)) then
+    begin
+      result := True;
+      break();
+    end;
+  until (GetTickCount() < timeOut);
+
+  print('TRSGrandExchange.__openSlot(): Slot ' + toStr(geSlot) + ' = ' + boolToStr(result));
+end;
+
 (*
 collectSlot
 -----------
 
 .. code-block:: pascal
 
-    function TRSGrandExchange.collectSlot(geSlot: integer): boolean;
+    function TRSGrandExchange.collectSlot(geSlot: integer; useHotkey : boolean = False): boolean;
 
 Returns true if it collects coins and/or items from the completed or aborted slot
-**geSlot** .
+**geSlot** . Optional hotkey usage.
 
 .. note::
 
     - by The Mayor
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 20 May 2020 by 3Garrett3
 
 Example:
 
@@ -1126,7 +1226,7 @@ Example:
     grandExchange.collectSlot(2);
 
 *)
-function TRSGrandExchange.collectSlot(geSlot: integer): boolean;
+function TRSGrandExchange.collectSlot(geSlot: integer; useHotkey : boolean = False): boolean;  // Added useHotkey
 var
   TBA: TBoxArray := self.__getSlotBoxes();
   collectBox: TBoxArray := grid(2, 1, 37, 32, 49, 0, point(self.x1 + 463, self.y1 + 385));
@@ -1135,21 +1235,13 @@ var
 begin
   if not self.__isProgressOpen() then
   begin
-    self.__returnToSummary();
+    self.__returnToSummary(useHotkey);
 
-    if (not self.__isSlotActive(geSlot)) or self.__isSlotEmpty(geSlot) then
+    if not self.__openSlot(geSlot, useHotkey) then // Put common code into openSlot function
     begin
-      print('TRSGrandExchange.collectSlot(): Cannot collect as offer slot ' + toStr(geSlot) + ' is empty', TDebug.ERROR);
+      print('TRSGrandExchange.collectSlot(): Cannot collect as opening slot ' + toStr(geSlot) + ' failed', TDebug.ERROR);
       exit(false);
     end;
-
-    timeOut := GetTickCount() + randomRange(3000, 4000);
-
-    repeat
-      mouseBox(TBA[geSlot - 1], MOUSE_LEFT);
-      if self.__isProgressOpen(2000 + random(500)) then
-        break();
-    until (GetTickCount() < timeOut);
   end;
 
   for i := high(collectBox) downto 0 do
@@ -1166,7 +1258,7 @@ begin
         end;
       end;
 
-  self.__returnToSummary();
+  self.__returnToSummary(useHotkey);
 
   print('TRSGrandExchange.collectSlot(): Slot ' + toStr(geSlot) + ' = ' + boolToStr(result));
 end;
@@ -1273,7 +1365,7 @@ set to true it will also collect the items and gold from the aborted offer.
 .. note::
 
     - by The Mayor
-    - Last Updated: 27 July 2015 by Clarity
+    - Last Updated: 20 May 2020 by 3Garrett3
 
 Example:
 
@@ -1283,7 +1375,7 @@ Example:
     grandExchange.abortSlot(2, false); // To leave items in the aborted offer slot
 
 *)
-function TRSGrandExchange.abortSlot(geSlot: integer; collect: boolean = true): boolean;
+function TRSGrandExchange.abortSlot(geSlot: integer; collect: boolean = true; useHotkey : boolean = false): boolean;
 var
   TBA: TBoxArray := self.__getSlotBoxes();
   abortButton: TPoint := [self.x1 + 412, self.y1 + 373];
@@ -1295,7 +1387,7 @@ begin
     exit(false);
   end;
 
-  self.__returnToSummary();
+  self.__returnToSummary(useHotkey);
 
   if self.__isSlotEmpty(geSlot) or (not self.__isSlotActive(geSlot)) then
   begin
@@ -1315,19 +1407,21 @@ begin
     exit(false);
   end;
 
-  mouseBox(TBA[geSlot - 1], MOUSE_LEFT);
-
-  if self.__isProgressOpen(3000) then
+  if not self.__openSlot(geSlot, useHotkey) then   // Added opening function
+  begin
+    print('TRSGrandExchange.abortSlot(): Cannot abort as offer slot ' + toStr(geSlot) + ' couldnt be opened', TDebug.ERROR);
+    exit(false);
+  end else
   begin
     multiClick(abortButton.rand(5), 30, 3);
     waitColorCountRange(1048714, 5, redBox, 4000, 2000);
 
     if collect then
-      result := self.collectSlot(geSlot)
+      result := self.collectSlot(geSlot, useHotkey)
     else
     begin
       result := self.__isSlotAborted(geSlot);
-      self.__returnToSummary();
+      self.__returnToSummary(useHotkey);
     end;
   end;
 
@@ -1380,28 +1474,23 @@ getPercentDone
 
 .. code-block:: pascal
 
-    function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+    function TRSGrandExchange._getProgressCount(geSlot: integer): integer;
 
-Returns the percentage toward completion for the offer in **geSlot** .
+Used internally for getting percentage completion.
 
 .. note::
 
     - by turpinator
-    - Last Updated: 7 July 2016 by SlipperyPickle
+    - Last Updated: 25 May 2020 by 3Garrett3
 
 Example:
 
 .. code-block:: pascal
 
-    var
-      per: Integer;
-    begin
-      per := grandExchange.getPercentDone(2);
-      writeLn('Slot 2 is ' + toStr(per) + ' percent complete!');
-    end;
+    percentDone := grandExchange.__getProgressCount(1) * 0.6462;
 
 *)
-function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+function TRSGrandExchange.__getProgressCount(geSlot: integer): integer;
 const
   BG_COLORS = [2500653, 1974051, 2565929, 2039584];
 var
@@ -1417,7 +1506,71 @@ begin
     for i := 0 to high(BG_COLORS) do
       if (getColor(x + result, y) = BG_COLORS[i]) then
         break(2);
-  exit(round(0.6462 * (result)));
+end;
+
+(*
+getPercentDone
+--------------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+
+Returns the percentage toward completion for the offer in **geSlot** .
+
+.. note::
+
+    - by turpinator
+    - Last Updated: 25 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      per: Integer;
+    begin
+      per := grandExchange.getPercentDone(2);
+      writeLn('Slot 2 is ' + toStr(per) + ' percent complete!');
+    end;
+
+*)
+function TRSGrandExchange.getPercentDone(geSlot: integer): integer;
+begin
+  result := round(0.6462 * self.__getProgressCount(geSlot)); // Moved counting to separate function
+end;
+
+(*
+getPercentDone
+--------------
+
+.. code-block:: pascal
+
+    function TRSGrandExchange.getPercentDone(geSlot: integer): Extended;
+
+Returns the percentage toward completion for the offer in **geSlot**. Returns
+decimal value.
+
+.. note::
+
+    - by turpinator
+    - Last Updated: 25 May 2020 by 3Garrett3
+
+Example:
+
+.. code-block:: pascal
+
+    var
+      per: Extended;
+    begin
+      per := grandExchange.getPercentDone(2);
+      writeLn('Slot 2 is ' + toStr(per*100) + ' percent complete!');
+    end;
+
+*)
+function TRSGrandExchange.getPercentDone(geSlot: integer): Extended; overload;
+begin
+  result := 0.6462 * self.__getProgressCount(geSlot);
 end;
 
 (*

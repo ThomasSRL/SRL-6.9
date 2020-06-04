@@ -145,7 +145,7 @@ Example:
 
 function containsMatch(needle, haystack: string; caseSensitive: boolean = true;  match: extended): boolean; overload;
 begin
-  result := (containsMatch(needle, haystack, caseSensitive) > match);
+  result := (containsMatch(needle, haystack, caseSensitive) >= match);
   if result then
     print('Found "'+ needle +'" in string "'+ haystack +'".');
 end;
